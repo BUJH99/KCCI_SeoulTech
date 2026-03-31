@@ -1,0 +1,403 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 -100 2200 1380" width="2200" height="1380" style="background-color: white; font-family: Arial, sans-serif;">
+<defs>
+  <marker id="arr" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M 0 0 L 10 5 L 0 10 z" fill="#333" />
+  </marker>
+  <marker id="arr-red" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M 0 0 L 10 5 L 0 10 z" fill="#d32f2f" />
+  </marker>
+  <marker id="arr-blue" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+    <path d="M 0 0 L 10 5 L 0 10 z" fill="#1976d2" />
+  </marker>
+  <style>
+    .top-band { fill: #f6f9fc; stroke: #d7e3ef; stroke-width: 1.5; rx: 18; }
+    .top-box { fill: #eef5fb; stroke: #5f7d99; stroke-width: 2; rx: 12; }
+    .stage-bg { fill: #fcfcfc; stroke: #eee; stroke-width: 2; stroke-dasharray: 10,5; rx: 10; }
+    .lbl { fill: #aaaaaa; font-size: 28px; font-weight: bold; font-style: italic; text-anchor: middle; }
+    .reg { fill: #fff3cd; stroke: #ffc107; stroke-width: 2; }
+    .comp { fill: #e2f0d9; stroke: #548235; stroke-width: 2; rx: 5; }
+    .mem { fill: #ddebf7; stroke: #2e75b6; stroke-width: 2; rx: 5; }
+    .ctrl { fill: #fce4ec; stroke: #c2185b; stroke-width: 2; rx: 25; }
+    .mux { fill: #eaddf6; stroke: #805ad5; stroke-width: 2; }
+    .alu { fill: #d0e3f5; stroke: #2b6cb0; stroke-width: 2; }
+    .line { fill: none; stroke: #444; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+    .line-arr { fill: none; stroke: #444; stroke-width: 2; marker-end: url(#arr); stroke-linejoin: round; stroke-linecap: round; }
+    .line-red { fill: none; stroke: #d32f2f; stroke-width: 2; marker-end: url(#arr-red); stroke-linejoin: round; stroke-linecap: round; }
+    .line-blue { fill: none; stroke: #1976d2; stroke-width: 2; marker-end: url(#arr-blue); stroke-linejoin: round; stroke-linecap: round; stroke-dasharray: 4,4; }
+    .txt-c { text-anchor: middle; dominant-baseline: central; fill: #111; font-weight: bold; font-size: 12px; }
+    .txt-sc { text-anchor: middle; dominant-baseline: central; fill: #111; font-weight: bold; font-size: 10px; }
+    .txt-s { text-anchor: middle; dominant-baseline: central; fill: #222; font-size: 9px; font-weight: bold; }
+    .txt-l { text-anchor: start; dominant-baseline: central; fill: #111; font-weight: bold; font-size: 10px; }
+    .txt-top { text-anchor: middle; dominant-baseline: central; fill: #1b3853; font-size: 10px; font-weight: bold; }
+  </style>
+<marker id="hl-arr-orange" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+  <path d="M 0 0 L 10 5 L 0 10 z" fill="#ff8a00" />
+</marker>
+<marker id="hl-arr-blue" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+  <path d="M 0 0 L 10 5 L 0 10 z" fill="#1570ef" />
+</marker>
+<marker id="hl-arr-magenta" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+  <path d="M 0 0 L 10 5 L 0 10 z" fill="#c2185b" />
+</marker>
+<style>
+  .hl-wire-bg { fill: none; stroke: #ffffff; stroke-width: 8; stroke-linejoin: round; stroke-linecap: round; opacity: 0.96; }
+  .hl-wire-orange { fill: none; stroke: #ff8a00; stroke-width: 4; marker-end: url(#hl-arr-orange); stroke-linejoin: round; stroke-linecap: round; }
+  .hl-wire-blue { fill: none; stroke: #1570ef; stroke-width: 4; marker-end: url(#hl-arr-blue); stroke-linejoin: round; stroke-linecap: round; }
+  .hl-wire-magenta { fill: none; stroke: #c2185b; stroke-width: 4; marker-end: url(#hl-arr-magenta); stroke-linejoin: round; stroke-linecap: round; }
+  .hl-box-orange { fill: #ff8a00; fill-opacity: 0.10; stroke: #ff8a00; stroke-width: 4; }
+  .hl-box-blue { fill: #1570ef; fill-opacity: 0.10; stroke: #1570ef; stroke-width: 4; }
+  .hl-box-magenta { fill: #c2185b; fill-opacity: 0.10; stroke: #c2185b; stroke-width: 4; }
+  .hl-note-orange { fill: #fff8ef; stroke: #ff8a00; stroke-width: 2; }
+  .hl-note-blue { fill: #f5f9ff; stroke: #1570ef; stroke-width: 2; }
+  .hl-note-magenta { fill: #fff4f8; stroke: #c2185b; stroke-width: 2; }
+  .hl-title { fill: #111111; font-size: 13px; font-weight: bold; }
+  .hl-sub { fill: #333333; font-size: 10px; font-weight: bold; }
+  .hl-step-text { fill: #374151; font-size: 8.8px; }
+  .hl-step-num-orange { fill: #ff8a00; font-size: 9px; font-weight: bold; }
+  .hl-step-num-blue { fill: #1570ef; font-size: 9px; font-weight: bold; }
+  .hl-step-num-magenta { fill: #c2185b; font-size: 9px; font-weight: bold; }
+  .hl-badge-orange { fill: #ffffff; stroke: #ff8a00; stroke-width: 2.2; }
+  .hl-badge-blue { fill: #ffffff; stroke: #1570ef; stroke-width: 2.2; }
+  .hl-badge-magenta { fill: #ffffff; stroke: #c2185b; stroke-width: 2.2; }
+  .hl-pill-orange { fill: #ffffff; stroke: #ff8a00; stroke-width: 2; }
+  .hl-pill-blue { fill: #ffffff; stroke: #1570ef; stroke-width: 2; }
+  .hl-pill-magenta { fill: #ffffff; stroke: #c2185b; stroke-width: 2; }
+  .hl-badge-num { fill: #111111; font-size: 9px; font-weight: bold; text-anchor: middle; dominant-baseline: central; }
+</style>
+</defs>
+<g transform="scale(1.2)">
+  <g id="top-level-band">
+    <rect class="top-band" x="20" y="-72" width="1610" height="132" />
+  </g>
+  <g id="stage-backgrounds">
+    <rect class="stage-bg" x="20" y="136" width="300" height="840" />
+    <rect class="stage-bg" x="390" y="136" width="320" height="840" />
+    <rect class="stage-bg" x="780" y="136" width="350" height="840" />
+    <rect class="stage-bg" x="1185" y="136" width="300" height="840" />
+    <rect class="stage-bg" x="1540" y="136" width="280" height="840" />
+  </g>
+
+  <g id="wires">
+    <path class="line-arr" d="M 103 495 H 130" />
+    <path class="line-arr" d="M 164 495 H 215" />
+    <path class="line-arr" d="M 293 495 H 335" />
+
+    <path class="line-blue" d="M 147 -6 V 461" />
+    <path class="line-blue" d="M 330 -6 V 122 H 352 V 136" />
+    <path class="line-blue" d="M 530 -6 V 122 H 742 V 136" />
+    <path class="line-blue" d="M 710 -6 V 122 H 1162 V 136" />
+
+    <path class="line" d="M 370 495 H 395 V 171" />
+    <path class="line-arr" d="M 395 171 H 470" />
+    <path class="line-arr" d="M 395 244 H 470" />
+    <path class="line-arr" d="M 395 316 H 422" />
+    <path class="line-arr" d="M 395 326 H 497" />
+    <path class="line-arr" d="M 395 470 H 470" />
+    <path class="line-arr" d="M 395 611 H 474" />
+    <path class="line-arr" d="M 395 786 H 470" />
+
+    <path class="line-arr" d="M 468 317 H 497" />
+
+    <path class="line-arr" d="M 572 171 H 725" />
+    <path class="line-arr" d="M 572 244 H 725" />
+    <path class="line-arr" d="M 572 470 H 725" />
+    <path class="line-arr" d="M 568 611 H 725" />
+
+    <path class="line-blue" d="M 521 812 V 832 H 340 V 198 H 90 V -6" />
+    <text class="txt-s" fill="#1976d2" x="304" y="818">load-use stall</text>
+
+    <path class="line-red" d="M 599 316 H 650 V 98 H 84 V 472 H 70" />
+    <text class="txt-l" fill="#d32f2f" x="350" y="102">IdRedirect</text>
+
+    <path class="line-blue" d="M 572 244 H 620 V 84 H 1165 V -6" />
+
+    <path class="line-arr" d="M 760 171 H 900" />
+    <path class="line-arr" d="M 760 241 H 935" />
+    <path class="line-arr" d="M 760 316 H 910" />
+    <path class="line-arr" d="M 760 470 H 820" />
+    <path class="line-arr" d="M 760 786 H 930" />
+
+    <path class="line-arr" d="M 853 470 H 875" />
+    <path class="line-arr" d="M 853 505 H 875" />
+    <path class="line-arr" d="M 908 470 H 948" />
+    <path class="line-arr" d="M 908 510 H 948" />
+    <path class="line-arr" d="M 853 520 V 686 H 990" />
+    <path class="line-arr" d="M 865 470 V 595 H 940" />
+    <path class="line-arr" d="M 880 505 V 607 H 940" />
+    <path class="line-arr" d="M 1042 510 H 1145" />
+    <path class="line-arr" d="M 1023 699 H 1145" />
+    <text class="txt-s" x="900" y="566">Fwd Rs1/Rs2</text>
+
+    <path class="line-arr" d="M 990 215 V 190 H 880 V 171 H 900" />
+    <path class="line-arr" d="M 1050 601 H 1085 V 183 H 1026" />
+    <path class="line-arr" d="M 1028 316 H 1060 V 20 H 975 V -6" />
+
+    <path class="line-red" d="M 963 145 V 78 H 56 V 495 H 70" />
+    <text class="txt-l" fill="#d32f2f" x="885" y="82">ExRedirect</text>
+
+    <path class="line-blue" d="M 981 760 V 740 H 800 V 520 H 820" />
+    <path class="line-blue" d="M 981 760 V 714 H 990" />
+    <text class="txt-s" fill="#1976d2" x="888" y="770">forward sel</text>
+
+    <path class="line-blue" d="M 1070 -26 H 1095" />
+
+    <path class="line-arr" d="M 1180 400 H 1242" />
+    <path class="line-arr" d="M 1180 511 H 1284" />
+    <path class="line-arr" d="M 1180 591 H 1284" />
+    <path class="line-arr" d="M 1180 171 H 1269" />
+    <path class="line-arr" d="M 1428 400 H 1435 V -26 H 1425" />
+    <path class="line-arr" d="M 1335 490 V 450" />
+    <path class="line-arr" d="M 1428 400 H 1440 V 591 H 1386" />
+    <path class="line-arr" d="M 1386 591 H 1500" />
+
+    <path class="line-blue" d="M 1335 145 V -6" />
+    <path class="line-red" d="M 1225 -6 V 60 H 32 V 518 H 70" />
+    <path class="line-blue" d="M 1115 -6 V 44 H 640 V -6" />
+    <text class="txt-l" fill="#d32f2f" x="1138" y="64">TrapRedirect</text>
+
+    <path class="line-arr" d="M 1535 489 H 1628" />
+    <path class="line-arr" d="M 1698 489 H 1760" />
+
+    <path class="line-blue" d="M 1698 489 H 1750 V 865 H 430 V 488 H 470" />
+    <path class="line-blue" d="M 1698 500 H 1738 V 840 H 790 V 520 H 820" />
+    <path class="line-blue" d="M 1145 772 H 1060 V 825 H 910 V 780 H 930" />
+    <path class="line-blue" d="M 1500 786 H 1420 V 840 H 910 V 792 H 930" />
+    <text class="txt-s" fill="#1976d2" x="1228" y="632">EX/MEM, MEM/WB Rd</text>
+    <text class="txt-s" fill="#1976d2" x="520" y="850">WbWriteData</text>
+  </g>
+
+  <g id="pipe-registers">
+    <rect class="reg" x="335" y="136" width="35" height="780" />
+    <text class="txt-c" x="352.5" y="526" transform="rotate(-90 352.5,526)" font-size="20px">IF / ID</text>
+
+    <rect class="reg" x="725" y="136" width="35" height="780" />
+    <text class="txt-c" x="742.5" y="526" transform="rotate(-90 742.5,526)" font-size="20px">ID / EX</text>
+
+    <rect class="reg" x="1145" y="136" width="35" height="780" />
+    <text class="txt-c" x="1162.5" y="526" transform="rotate(-90 1162.5,526)" font-size="20px">EX / MEM</text>
+
+    <rect class="reg" x="1500" y="136" width="35" height="780" />
+    <text class="txt-c" x="1517.5" y="526" transform="rotate(-90 1517.5,526)" font-size="20px">MEM / WB</text>
+  </g>
+
+  <g id="modules">
+    <rect class="top-box" x="40" y="-46" width="700" height="40" />
+    <text class="txt-top" x="390" y="-26">PipeFlowCtrl</text>
+
+    <polygon class="mux" points="70,455 103,474 103,516 70,535" />
+    <text class="txt-sc" x="86.5" y="495">Mux</text>
+    <text class="txt-l" x="25" y="440">NextPcMux</text>
+
+    <rect class="reg" x="130" y="461" width="34" height="68" />
+    <text class="txt-sc" x="147" y="495">Pc</text>
+
+    <rect class="mem" x="215" y="451" width="78" height="88" />
+    <text class="txt-sc" x="254" y="488">InstrRom</text>
+    <text class="txt-sc" x="254" y="502">(ROM)</text>
+
+    <rect class="comp" x="422" y="283" width="46" height="68" />
+    <text class="txt-sc" x="445" y="309">Instr</text>
+    <text class="txt-sc" x="445" y="323">Fields</text>
+
+    <rect class="ctrl" x="470" y="145" width="102" height="52" />
+    <text class="txt-sc" x="521" y="171">ControlUnit</text>
+
+    <rect class="ctrl" x="470" y="220" width="102" height="48" />
+    <text class="txt-sc" x="521" y="238">TrapCause</text>
+    <text class="txt-sc" x="521" y="252">Gen</text>
+
+    <rect class="comp" x="497" y="290" width="102" height="52" />
+    <text class="txt-sc" x="548" y="309">JalRedirect</text>
+    <text class="txt-sc" x="548" y="323">(Decode)</text>
+
+    <rect class="comp" x="470" y="413" width="102" height="115" />
+    <text class="txt-sc" x="521" y="470">Regfile</text>
+
+    <rect class="comp" x="474" y="590" width="94" height="42" />
+    <text class="txt-sc" x="521" y="611">ImmGen</text>
+
+    <rect class="ctrl" x="470" y="760" width="102" height="52" />
+    <text class="txt-sc" x="521" y="786">HazardUnit</text>
+
+    <rect class="ctrl" x="900" y="145" width="126" height="52" />
+    <text class="txt-s" x="963" y="164">ExecuteRedirect</text>
+    <text class="txt-s" x="963" y="178">Ctrl</text>
+
+    <rect class="comp" x="935" y="215" width="110" height="52" />
+    <text class="txt-sc" x="990" y="241">PcTargetGen</text>
+
+    <rect class="ctrl" x="910" y="290" width="118" height="52" />
+    <text class="txt-s" x="969" y="309">ExecuteCsr</text>
+    <text class="txt-s" x="969" y="323">Ctrl</text>
+
+    <rect class="top-box" x="880" y="-46" width="190" height="40" />
+    <text class="txt-top" x="975" y="-26">CsrFile</text>
+
+    <polygon class="mux" points="820,430 853,448 853,540 820,558" />
+    <text class="txt-sc" x="836.5" y="489">Fwd</text>
+    <text class="txt-sc" x="836.5" y="503">Mux</text>
+
+    <polygon class="mux" points="875,420 908,438 908,540 875,558" />
+    <text class="txt-s" x="891.5" y="476">ALU</text>
+    <text class="txt-s" x="891.5" y="490">Input</text>
+    <text class="txt-s" x="891.5" y="504">Mux</text>
+
+    <polygon class="mux" points="990,655 1023,670 1023,728 990,743" />
+    <text class="txt-s" x="1006.5" y="687">Store</text>
+    <text class="txt-s" x="1006.5" y="701">Data</text>
+    <text class="txt-s" x="1006.5" y="715">Mux</text>
+
+    <polygon class="alu" points="948,438 1042,472 1042,548 948,582 948,518 972,510 948,502" />
+    <text class="txt-c" x="995" y="510">ALU</text>
+
+    <rect class="comp" x="940" y="580" width="110" height="42" />
+    <text class="txt-s" x="995" y="594">Branch</text>
+    <text class="txt-s" x="995" y="608">Comparator</text>
+
+    <rect class="ctrl" x="930" y="760" width="102" height="52" />
+    <text class="txt-sc" x="981" y="786">ForwardUnit</text>
+
+    <rect class="top-box" x="1095" y="-46" width="260" height="40" />
+    <text class="txt-top" x="1225" y="-26">TrapController</text>
+
+    <rect class="top-box" x="1242" y="350" width="186" height="100" />
+    <text class="txt-top" x="1335" y="392">DataBus</text>
+    <text class="txt-top" x="1335" y="408">Master</text>
+
+    <rect class="top-box" x="1425" y="-46" width="180" height="40" />
+    <text class="txt-top" x="1515" y="-26">DataRam</text>
+
+    <rect class="comp" x="1284" y="490" width="102" height="42" />
+    <text class="txt-s" x="1335" y="504">Store</text>
+    <text class="txt-s" x="1335" y="518">Formatter</text>
+
+    <rect class="comp" x="1284" y="570" width="102" height="42" />
+    <text class="txt-s" x="1335" y="584">Load</text>
+    <text class="txt-s" x="1335" y="598">Formatter</text>
+
+    <rect class="ctrl" x="1269" y="145" width="132" height="52" />
+    <text class="txt-s" x="1335" y="164">MemoryTrap</text>
+    <text class="txt-s" x="1335" y="178">Classifier</text>
+
+    <polygon class="mux" points="1628,448 1698,468 1698,510 1628,530" />
+    <text class="txt-sc" x="1663" y="482">WB</text>
+    <text class="txt-sc" x="1663" y="496">Mux</text>
+  </g>
+
+  <g id="stage-labels">
+    <text class="lbl" x="170" y="956">Fetch</text>
+    <text class="lbl" x="550" y="956">Decode</text>
+    <text class="lbl" x="955" y="956">Execute</text>
+    <text class="lbl" x="1335" y="956">Memory</text>
+    <text class="lbl" x="1680" y="956">Write-Back</text>
+  </g>
+  <g id="dataflow-overlay">
+    <rect class="hl-note-orange" x="1548" y="140" width="255" height="156" rx="12" />
+    <text class="hl-title" x="1562" y="160">Load</text>
+    <text class="hl-sub" x="1562" y="177">LB/LH/LW/LBU/LHU</text>
+    <text class="hl-step-num-orange" x="1562" y="196">1.</text>
+    <text class="hl-step-text" x="1576" y="196">Fetch updates PC and loads instruction</text>
+    <text class="hl-step-num-orange" x="1562" y="212">2.</text>
+    <text class="hl-step-text" x="1576" y="212">Decode selects LOAD control</text>
+    <text class="hl-step-num-orange" x="1562" y="228">3.</text>
+    <text class="hl-step-text" x="1576" y="228">Regfile + ImmGen prepare address inputs</text>
+    <text class="hl-step-num-orange" x="1562" y="244">4.</text>
+    <text class="hl-step-text" x="1576" y="244">ALU computes byte/half/word address</text>
+    <text class="hl-step-num-orange" x="1562" y="260">5.</text>
+    <text class="hl-step-text" x="1576" y="260">Memory path uses DataBus + LoadFormatter</text>
+    <text class="hl-step-num-orange" x="1562" y="276">6.</text>
+    <text class="hl-step-text" x="1576" y="276">WB mux returns load data to Regfile</text>
+    <polygon class="hl-box-orange" points="70,455 103,474 103,516 70,535" />
+    <rect class="hl-box-orange" x="124" y="455" width="46" height="80" rx="4" />
+    <rect class="hl-box-orange" x="209" y="445" width="90" height="100" rx="6" />
+    <rect class="hl-box-orange" x="329" y="130" width="47" height="792" rx="4" />
+    <rect class="hl-box-orange" x="416" y="277" width="58" height="80" rx="6" />
+    <rect class="hl-box-orange" x="464" y="139" width="114" height="64" rx="25" />
+    <rect class="hl-box-orange" x="464" y="407" width="114" height="127" rx="8" />
+    <rect class="hl-box-orange" x="468" y="584" width="106" height="54" rx="8" />
+    <rect class="hl-box-orange" x="719" y="130" width="47" height="792" rx="4" />
+    <polygon class="hl-box-orange" points="820,430 853,448 853,540 820,558" />
+    <polygon class="hl-box-orange" points="875,420 908,438 908,540 875,558" />
+    <polygon class="hl-box-orange" points="948,438 1042,472 1042,548 948,582 948,518 972,510 948,502" />
+    <rect class="hl-box-orange" x="1139" y="130" width="47" height="792" rx="4" />
+    <rect class="hl-box-orange" x="1236" y="344" width="198" height="112" rx="12" />
+    <rect class="hl-box-orange" x="1419" y="-52" width="192" height="52" rx="12" />
+    <rect class="hl-box-orange" x="1278" y="564" width="114" height="54" rx="8" />
+    <rect class="hl-box-orange" x="1263" y="139" width="144" height="64" rx="25" />
+    <rect class="hl-box-orange" x="1494" y="130" width="47" height="792" rx="4" />
+    <polygon class="hl-box-orange" points="1628,448 1698,468 1698,510 1628,530" />
+    <path class="hl-wire-bg" d="M 103 495 H 130" />
+        <path class="hl-wire-orange" d="M 103 495 H 130" />
+    <path class="hl-wire-bg" d="M 164 495 H 215" />
+        <path class="hl-wire-orange" d="M 164 495 H 215" />
+    <path class="hl-wire-bg" d="M 293 495 H 335" />
+        <path class="hl-wire-orange" d="M 293 495 H 335" />
+    <path class="hl-wire-bg" d="M 395 316 H 422" />
+        <path class="hl-wire-orange" d="M 395 316 H 422" />
+    <path class="hl-wire-bg" d="M 395 171 H 470" />
+        <path class="hl-wire-orange" d="M 395 171 H 470" />
+    <path class="hl-wire-bg" d="M 395 470 H 470" />
+        <path class="hl-wire-orange" d="M 395 470 H 470" />
+    <path class="hl-wire-bg" d="M 395 611 H 474" />
+        <path class="hl-wire-orange" d="M 395 611 H 474" />
+    <path class="hl-wire-bg" d="M 572 171 H 725" />
+        <path class="hl-wire-orange" d="M 572 171 H 725" />
+    <path class="hl-wire-bg" d="M 572 470 H 725" />
+        <path class="hl-wire-orange" d="M 572 470 H 725" />
+    <path class="hl-wire-bg" d="M 568 611 H 725" />
+        <path class="hl-wire-orange" d="M 568 611 H 725" />
+    <path class="hl-wire-bg" d="M 760 470 H 820" />
+        <path class="hl-wire-orange" d="M 760 470 H 820" />
+    <path class="hl-wire-bg" d="M 853 470 H 875" />
+        <path class="hl-wire-orange" d="M 853 470 H 875" />
+    <path class="hl-wire-bg" d="M 853 505 H 875" />
+        <path class="hl-wire-orange" d="M 853 505 H 875" />
+    <path class="hl-wire-bg" d="M 908 470 H 948" />
+        <path class="hl-wire-orange" d="M 908 470 H 948" />
+    <path class="hl-wire-bg" d="M 908 510 H 948" />
+        <path class="hl-wire-orange" d="M 908 510 H 948" />
+    <path class="hl-wire-bg" d="M 1042 510 H 1145" />
+        <path class="hl-wire-orange" d="M 1042 510 H 1145" />
+    <path class="hl-wire-bg" d="M 1180 400 H 1242" />
+        <path class="hl-wire-orange" d="M 1180 400 H 1242" />
+    <path class="hl-wire-bg" d="M 1180 591 H 1284" />
+        <path class="hl-wire-orange" d="M 1180 591 H 1284" />
+    <path class="hl-wire-bg" d="M 1180 171 H 1269" />
+        <path class="hl-wire-orange" d="M 1180 171 H 1269" />
+    <path class="hl-wire-bg" d="M 1428 400 H 1435 V -26 H 1425" />
+        <path class="hl-wire-orange" d="M 1428 400 H 1435 V -26 H 1425" />
+    <path class="hl-wire-bg" d="M 1428 400 H 1440 V 591 H 1386" />
+        <path class="hl-wire-orange" d="M 1428 400 H 1440 V 591 H 1386" />
+    <path class="hl-wire-bg" d="M 1386 591 H 1500" />
+        <path class="hl-wire-orange" d="M 1386 591 H 1500" />
+    <path class="hl-wire-bg" d="M 1535 489 H 1628" />
+        <path class="hl-wire-orange" d="M 1535 489 H 1628" />
+    <path class="hl-wire-bg" d="M 1698 489 H 1750 V 865 H 430 V 488 H 470" />
+        <path class="hl-wire-orange" d="M 1698 489 H 1750 V 865 H 430 V 488 H 470" />
+    <circle class="hl-badge-orange" cx="140" cy="430" r="11" />
+        <text class="hl-badge-num" x="140" y="430">1</text>
+    <rect class="hl-pill-orange" x="294" y="488" width="22" height="14" rx="7" />
+        <text class="hl-badge-num" x="305" y="495">1</text>
+    <circle class="hl-badge-orange" cx="450" cy="150" r="11" />
+        <text class="hl-badge-num" x="450" y="150">2</text>
+    <rect class="hl-pill-orange" x="419" y="309" width="22" height="14" rx="7" />
+        <text class="hl-badge-num" x="430" y="316">2</text>
+    <circle class="hl-badge-orange" cx="440" cy="410" r="11" />
+        <text class="hl-badge-num" x="440" y="410">3</text>
+    <rect class="hl-pill-orange" x="639" y="604" width="22" height="14" rx="7" />
+        <text class="hl-badge-num" x="650" y="611">3</text>
+    <circle class="hl-badge-orange" cx="930" cy="430" r="11" />
+        <text class="hl-badge-num" x="930" y="430">4</text>
+    <rect class="hl-pill-orange" x="1079" y="503" width="22" height="14" rx="7" />
+        <text class="hl-badge-num" x="1090" y="510">4</text>
+    <circle class="hl-badge-orange" cx="1405" cy="330" r="11" />
+        <text class="hl-badge-num" x="1405" y="330">5</text>
+    <rect class="hl-pill-orange" x="1429" y="513" width="22" height="14" rx="7" />
+        <text class="hl-badge-num" x="1440" y="520">5</text>
+    <circle class="hl-badge-orange" cx="1612" cy="430" r="11" />
+        <text class="hl-badge-num" x="1612" y="430">6</text>
+    <rect class="hl-pill-orange" x="1569" y="482" width="22" height="14" rx="7" />
+        <text class="hl-badge-num" x="1580" y="489">6</text>
+  </g>
+</g>
+</svg>

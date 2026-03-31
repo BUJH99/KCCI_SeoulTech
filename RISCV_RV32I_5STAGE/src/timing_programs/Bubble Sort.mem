@@ -1,0 +1,43 @@
+// ============================================================================
+// RV32I bubble-sort ROM image
+//   format: HEX // PC / instruction / key state transition
+//   target: descending sort of 4 words at 0x100 with DONE flag at 0x110
+// ============================================================================
+
+// Program setup / seed unsorted data
+10000413 // PC=000 addi s0,x0,0x100    -> RF[8]=0x00000100
+00400493 // PC=004 addi s1,x0,4        -> RF[9]=0x00000004
+11000913 // PC=008 addi s2,x0,0x110    -> RF[18]=0x00000110
+00300293 // PC=012 addi t0,x0,3        -> RF[5]=0x00000003
+00542023 // PC=016 sw t0,0(s0)         -> DMEM[0x100]=0x00000003
+00100293 // PC=020 addi t0,x0,1        -> RF[5]=0x00000001
+00542223 // PC=024 sw t0,4(s0)         -> DMEM[0x104]=0x00000001
+00400293 // PC=028 addi t0,x0,4        -> RF[5]=0x00000004
+00542423 // PC=032 sw t0,8(s0)         -> DMEM[0x108]=0x00000004
+00200293 // PC=036 addi t0,x0,2        -> RF[5]=0x00000002
+00542623 // PC=040 sw t0,12(s0)        -> DMEM[0x10c]=0x00000002
+00092023 // PC=044 sw x0,0(s2)         -> DMEM[0x110]=0x00000000
+00000293 // PC=048 addi t0,x0,0        -> RF[5]=0x00000000
+
+// Bubble-sort outer / inner loops
+fff48393 // PC=052 addi t2,s1,-1       -> RF[7]=0x00000003
+0272de63 // PC=056 bge t0,t2,sort_done -> branch when outer index reaches 3
+00000313 // PC=060 addi t1,x0,0        -> RF[6]=0x00000000
+40538e33 // PC=064 sub t3,t2,t0        -> RF[28]=remaining comparisons
+03c35463 // PC=068 bge t1,t3,next_out  -> branch when pass is complete
+00231e93 // PC=072 slli t4,t1,2        -> RF[29]=t1*4
+01d40eb3 // PC=076 add t4,s0,t4        -> RF[29]=&array[t1]
+000eaf03 // PC=080 lw t5,0(t4)         -> RF[30]=array[t1]
+004eaf83 // PC=084 lw t6,4(t4)         -> RF[31]=array[t1+1]
+01ff5663 // PC=088 bge t5,t6,no_swap   -> keep order when left >= right
+01fea023 // PC=092 sw t6,0(t4)         -> swap left word
+01eea223 // PC=096 sw t5,4(t4)         -> swap right word
+00130313 // PC=100 addi t1,t1,1        -> RF[6]=t1+1
+fddff06f // PC=104 jal x0,inner_loop   -> jump back to inner_loop
+00128293 // PC=108 addi t0,t0,1        -> RF[5]=t0+1
+fc5ff06f // PC=112 jal x0,outer_loop   -> jump back to outer_loop
+
+// Completion flag / terminal loop
+00100293 // PC=116 addi t0,x0,1        -> RF[5]=0x00000001
+00592023 // PC=120 sw t0,0(s2)         -> DMEM[0x110]=0x00000001, array=4,3,2,1
+0000006f // PC=124 jal x0,end_loop     -> self loop at PC=124

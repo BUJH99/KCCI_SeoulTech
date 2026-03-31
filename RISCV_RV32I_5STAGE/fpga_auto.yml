@@ -1,0 +1,29 @@
+version: "1"
+project:
+  name: "RISCV_RV32I_5STAGE"
+hdl:
+  top: "Top"
+  src_globs:
+    - "src/**/*.v"
+    - "src/**/*.sv"
+  tb_globs:
+    - "tb/**/*.v"
+    - "tb/**/*.sv"
+  inc_globs:
+    - "include/**/*.vh"
+    - "include/**/*.svh"
+    - "inc/**/*.vh"
+    - "inc/**/*.svh"
+  xdc_globs:
+    - "constrs/**/*.xdc"
+  exclude_globs: []
+sim:
+  tool: "xsim"
+  timescale: "1ns/1ps"
+vivado:
+  part: "xc7a35tcpg236-1"
+  strategy: "Default"
+  power_limit_w: 2.5
+report:
+  enable: true
+  format: "html"
