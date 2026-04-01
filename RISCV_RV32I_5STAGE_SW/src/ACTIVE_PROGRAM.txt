@@ -1,0 +1,4 @@
+Active program : strogue-micro-roguelike
+Program image  : C:\Users\tbdk5\Desktop\MAIN\0_Working\git\FPGA_Auto_Project\Project\RISCV_32I_5STAGE_SW\src\programs\roguelike\Roguelike.mem
+Program source : C:\Users\tbdk5\Desktop\MAIN\0_Working\git\FPGA_Auto_Project\Project\RISCV_32I_5STAGE_SW\src\programs\roguelike\Roguelike.s
+Activated at   : 2026-03-31 12:39:21.41

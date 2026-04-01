@@ -1,0 +1,103 @@
+// ============================================================================
+// RV32I timing / golden-check ROM image
+//   format: HEX // PC / instruction / key golden result
+// ============================================================================
+
+// Basic ALU / immediate operations
+00f00093 // PC=000 addi x1,x0,15        -> RF[1]=0x0000000F
+00300113 // PC=004 addi x2,x0,3         -> RF[2]=0x00000003
+ff000193 // PC=008 addi x3,x0,-16       -> RF[3]=0xFFFFFFF0
+08000b93 // PC=012 addi x23,x0,128      -> RF[23]=0x00000080
+09000c13 // PC=016 addi x24,x0,144      -> RF[24]=0x00000090
+00208233 // PC=020 add x4,x1,x2         -> RF[4]=0x00000012
+402082b3 // PC=024 sub x5,x1,x2         -> RF[5]=0x0000000C
+00209333 // PC=028 sll x6,x1,x2         -> RF[6]=0x00000078
+0011a3b3 // PC=032 slt x7,x3,x1         -> RF[7]=0x00000001
+0011b433 // PC=036 sltu x8,x3,x1        -> RF[8]=0x00000000
+0020c4b3 // PC=040 xor x9,x1,x2         -> RF[9]=0x0000000C
+0020d533 // PC=044 srl x10,x1,x2        -> RF[10]=0x00000001
+4021d5b3 // PC=048 sra x11,x3,x2        -> RF[11]=0xFFFFFFFE
+0020e633 // PC=052 or x12,x1,x2         -> RF[12]=0x0000000F
+0020f6b3 // PC=056 and x13,x1,x2        -> RF[13]=0x00000003
+00508713 // PC=060 addi x14,x1,5        -> RF[14]=0x00000014
+0001a793 // PC=064 slti x15,x3,0        -> RF[15]=0x00000001
+0011b813 // PC=068 sltiu x16,x3,1       -> RF[16]=0x00000000
+0030c893 // PC=072 xori x17,x1,3        -> RF[17]=0x0000000C
+0020e913 // PC=076 ori x18,x1,2         -> RF[18]=0x0000000F
+0070f993 // PC=080 andi x19,x1,7        -> RF[19]=0x00000007
+00411a13 // PC=084 slli x20,x2,4        -> RF[20]=0x00000030
+0010da93 // PC=088 srli x21,x1,1        -> RF[21]=0x00000007
+4021db13 // PC=092 srai x22,x3,2        -> RF[22]=0xFFFFFFFC
+12345cb7 // PC=096 lui x25,74565        -> RF[25]=0x12345000
+00001d17 // PC=100 auipc x26,1          -> RF[26]=0x00001064
+
+// Load / store operations
+00eba023 // PC=104 sw x14,x23,0         -> DMEM[0x80]=0x00000014
+000bad83 // PC=108 lw x27,x23,0         -> RF[27]=0x00000014
+002d8e33 // PC=112 add x28,x27,x2       -> RF[28]=0x00000017
+08000213 // PC=116 addi x4,x0,128       -> RF[4]=0x00000080
+004b8223 // PC=120 sb x4,x23,4          -> DMEM8[0x84]=0x80
+07f00293 // PC=124 addi x5,x0,127       -> RF[5]=0x0000007F
+005b82a3 // PC=128 sb x5,x23,5          -> DMEM8[0x85]=0x7F
+ff200313 // PC=132 addi x6,x0,-14       -> RF[6]=0xFFFFFFF2
+00831313 // PC=136 slli x6,x6,8         -> RF[6]=0xFFFFF200
+03430313 // PC=140 addi x6,x6,52        -> RF[6]=0xFFFFF234
+006b9323 // PC=144 sh x6,x23,6          -> DMEM16[0x86]=0xF234, DMEM32[0x84]=0xF2347F80
+004b8e83 // PC=148 lb x29,x23,4         -> RF[29]=0xFFFFFF80
+004bcf03 // PC=152 lbu x30,x23,4        -> RF[30]=0x00000080
+006b9f83 // PC=156 lh x31,x23,6         -> RF[31]=0xFFFFF234
+006bd203 // PC=160 lhu x4,x23,6         -> RF[4]=0x0000F234
+01eec2b3 // PC=164 xor x5,x29,x30       -> RF[5]=0xFFFFFF00
+004f8333 // PC=168 add x6,x31,x4        -> RF[6]=0x0000E468
+
+// Branch operations
+00000393 // PC=172 addi x7,x0,0         -> RF[7]=0x00000000
+00000413 // PC=176 addi x8,x0,0         -> RF[8]=0x00000000
+00208463 // PC=180 beq x1,x2,target     -> not taken, next PC=184
+00138393 // PC=184 addi x7,x7,1         -> RF[7]=0x00000001
+00108463 // PC=188 beq x1,x1,target     -> taken, skip PC=192
+06340413 // PC=192 addi x8,x8,99        -> skipped, RF[8] stays 0x00000000
+00140413 // PC=196 addi x8,x8,1         -> RF[8]=0x00000001
+00109463 // PC=200 bne x1,x1,target     -> not taken, next PC=204
+00138393 // PC=204 addi x7,x7,1         -> RF[7]=0x00000002
+00209463 // PC=208 bne x1,x2,target     -> taken, skip PC=212
+06340413 // PC=212 addi x8,x8,99        -> skipped, RF[8] stays 0x00000001
+00140413 // PC=216 addi x8,x8,1         -> RF[8]=0x00000002
+0020c463 // PC=220 blt x1,x2,target     -> not taken, next PC=224
+00138393 // PC=224 addi x7,x7,1         -> RF[7]=0x00000003
+0011c463 // PC=228 blt x3,x1,target     -> taken, skip PC=232
+06340413 // PC=232 addi x8,x8,99        -> skipped, RF[8] stays 0x00000002
+00140413 // PC=236 addi x8,x8,1         -> RF[8]=0x00000003
+00115463 // PC=240 bge x2,x1,target     -> not taken, next PC=244
+00138393 // PC=244 addi x7,x7,1         -> RF[7]=0x00000004
+0020d463 // PC=248 bge x1,x2,target     -> taken, skip PC=252
+06340413 // PC=252 addi x8,x8,99        -> skipped, RF[8] stays 0x00000003
+00140413 // PC=256 addi x8,x8,1         -> RF[8]=0x00000004
+0020e463 // PC=260 bltu x1,x2,target    -> not taken, next PC=264
+00138393 // PC=264 addi x7,x7,1         -> RF[7]=0x00000005
+00116463 // PC=268 bltu x2,x1,target    -> taken, skip PC=272
+06340413 // PC=272 addi x8,x8,99        -> skipped, RF[8] stays 0x00000004
+00140413 // PC=276 addi x8,x8,1         -> RF[8]=0x00000005
+00117463 // PC=280 bgeu x2,x1,target    -> not taken, next PC=284
+00138393 // PC=284 addi x7,x7,1         -> RF[7]=0x00000006
+0020f463 // PC=288 bgeu x1,x2,target    -> taken, skip PC=292
+06340413 // PC=292 addi x8,x8,99        -> skipped, RF[8] stays 0x00000005
+00140413 // PC=296 addi x8,x8,1         -> RF[8]=0x00000006
+
+// Loop / jump operations
+00400493 // PC=300 addi x9,x0,4         -> RF[9]=0x00000004
+00000513 // PC=304 addi x10,x0,0        -> RF[10]=0x00000000
+fff48493 // PC=308 addi x9,x9,-1        -> RF[9]=3,2,1,0 across loop
+00950533 // PC=312 add x10,x10,x9       -> RF[10]=3,5,6,6 across loop
+fe049ce3 // PC=316 bne x9,x0,loop_body  -> taken x3, final not taken
+008005ef // PC=320 jal x11,jal_target   -> RF[11]=0x00000144, jump PC=328
+06f00613 // PC=324 addi x12,x0,111      -> skipped, RF[12] stays 0x0000000F
+00000617 // PC=328 auipc x12,0          -> RF[12]=0x00000148
+01060613 // PC=332 addi x12,x12,16      -> RF[12]=0x00000158
+000606e7 // PC=336 jalr x13,x12,0       -> RF[13]=0x00000154, jump PC=344
+0de00713 // PC=340 addi x14,x0,222      -> skipped, RF[14] stays 0x00000014
+03700793 // PC=344 addi x15,x0,55       -> RF[15]=0x00000037
+0000000f // PC=348 fence                -> no architectural register change
+001c8833 // PC=352 add x16,x25,x1       -> RF[16]=0x1234500F
+002d08b3 // PC=356 add x17,x26,x2       -> RF[17]=0x00001067
+0000006f // PC=360 jal x0,done          -> self loop at PC=360

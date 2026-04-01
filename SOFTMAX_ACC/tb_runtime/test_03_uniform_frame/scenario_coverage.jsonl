@@ -1,0 +1,7 @@
+{"name":"uniform_len_2","checked_beats":2,"frame_samples":1,"reset_samples":0,"coverage_pct":9.6}
+{"name":"uniform_len_3","checked_beats":3,"frame_samples":1,"reset_samples":0,"coverage_pct":9.6}
+{"name":"uniform_len_5","checked_beats":5,"frame_samples":1,"reset_samples":0,"coverage_pct":9.6}
+{"name":"uniform_len_7","checked_beats":7,"frame_samples":1,"reset_samples":0,"coverage_pct":9.6}
+{"name":"uniform_len_16","checked_beats":16,"frame_samples":1,"reset_samples":0,"coverage_pct":9.6}
+{"name":"uniform_len_63","checked_beats":63,"frame_samples":1,"reset_samples":0,"coverage_pct":9.6}
+{"name":"uniform_len_64","checked_beats":64,"frame_samples":1,"reset_samples":0,"coverage_pct":9.6}

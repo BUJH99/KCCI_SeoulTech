@@ -1,0 +1,6 @@
+{"name":"special_zero","checked_beats":2,"frame_samples":1,"reset_samples":0,"coverage_pct":9.6}
+{"name":"special_large_finite_pair","checked_beats":2,"frame_samples":1,"reset_samples":0,"coverage_pct":9.6}
+{"name":"special_pos_inf_pair","checked_beats":2,"frame_samples":1,"reset_samples":0,"coverage_pct":9.6}
+{"name":"special_neg_inf_pair","checked_beats":2,"frame_samples":1,"reset_samples":0,"coverage_pct":9.6}
+{"name":"special_qnan_pair","checked_beats":2,"frame_samples":1,"reset_samples":0,"coverage_pct":9.6}
+{"name":"special_snan_pair","checked_beats":2,"frame_samples":1,"reset_samples":0,"coverage_pct":9.6}

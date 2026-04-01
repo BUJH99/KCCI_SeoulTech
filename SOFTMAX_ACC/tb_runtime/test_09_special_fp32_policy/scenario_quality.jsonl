@@ -1,0 +1,6 @@
+{"name":"special_zero","checked_beats":2,"mismatch_beats":0,"mismatch_rate_pct":0.0,"numeric_beats":2,"avg_abs_err":0.000000e+00,"max_abs_err":0.000000e+00,"avg_rel_err_pct":0.0,"max_rel_err_pct":0.0,"failed_frames":0}
+{"name":"special_large_finite_pair","checked_beats":2,"mismatch_beats":0,"mismatch_rate_pct":0.0,"numeric_beats":2,"avg_abs_err":0.000000e+00,"max_abs_err":0.000000e+00,"avg_rel_err_pct":0.0,"max_rel_err_pct":0.0,"failed_frames":0}
+{"name":"special_pos_inf_pair","checked_beats":2,"mismatch_beats":0,"mismatch_rate_pct":0.0,"numeric_beats":2,"avg_abs_err":0.000000e+00,"max_abs_err":0.000000e+00,"avg_rel_err_pct":0.0,"max_rel_err_pct":0.0,"failed_frames":0}
+{"name":"special_neg_inf_pair","checked_beats":2,"mismatch_beats":0,"mismatch_rate_pct":0.0,"numeric_beats":2,"avg_abs_err":0.000000e+00,"max_abs_err":0.000000e+00,"avg_rel_err_pct":0.0,"max_rel_err_pct":0.0,"failed_frames":0}
+{"name":"special_qnan_pair","checked_beats":2,"mismatch_beats":0,"mismatch_rate_pct":0.0,"numeric_beats":2,"avg_abs_err":0.000000e+00,"max_abs_err":0.000000e+00,"avg_rel_err_pct":0.0,"max_rel_err_pct":0.0,"failed_frames":0}
+{"name":"special_snan_pair","checked_beats":2,"mismatch_beats":0,"mismatch_rate_pct":0.0,"numeric_beats":2,"avg_abs_err":0.000000e+00,"max_abs_err":0.000000e+00,"avg_rel_err_pct":0.0,"max_rel_err_pct":0.0,"failed_frames":0}

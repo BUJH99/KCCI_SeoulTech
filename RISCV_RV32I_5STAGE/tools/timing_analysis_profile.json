@@ -1,0 +1,387 @@
+{
+  "clock_port": "iClk",
+  "reset_port": "iRstn",
+  "clock_period_ns": 10.0,
+  "analysis_mode": "pipeline_perf",
+  "default_output_root": ".analysis/pipeline_perf",
+  "default_report_path": "PIPELINE_PERF_REPORT.md",
+  "integrated_report_path": "md/INTEGRATED_TIMING_REPORT.md",
+  "compare_single_cycle_project": "RISCV_32I_SINGLE",
+  "focus_analysis": {
+    "enabled": true,
+    "output_subdir": "instruction_focus",
+    "instruction_mem_relpath": "src/InstructionFORTIMING.mem",
+    "rom_param_path": "uFetchStage.uInstrRom.P_INIT_FILE",
+    "wrapper_module_prefix": "TimingFocusTop_",
+    "wrapper_instance_name": "uDesign",
+    "emit_class_focus": true,
+    "emit_mnemonic_focus": true
+  },
+  "stage_order": [
+    "IF",
+    "ID",
+    "EX",
+    "MEM",
+    "WB",
+    "CF"
+  ],
+  "probe_families": [
+    {
+      "key": "if_boundary",
+      "label": "IF / IF-ID Boundary",
+      "description": "Instruction fetch and front-end control timing into the IF/ID pipeline register.",
+      "artifact_key": "if_boundary",
+      "stage": "IF",
+      "instance_patterns": [
+        "*uIfIdReg*"
+      ],
+      "ref_name_patterns": [
+        "IfIdReg"
+      ],
+      "pin_name_patterns": [
+        "D"
+      ]
+    },
+    {
+      "key": "id_boundary",
+      "label": "ID / ID-EX Boundary",
+      "description": "Decode, control, and operand timing into the ID/EX pipeline register.",
+      "artifact_key": "id_boundary",
+      "stage": "ID",
+      "instance_patterns": [
+        "*uIdExReg*"
+      ],
+      "ref_name_patterns": [
+        "IdExReg"
+      ],
+      "pin_name_patterns": [
+        "D"
+      ]
+    },
+    {
+      "key": "ex_boundary",
+      "label": "EX / EX-MEM Boundary",
+      "description": "Execute-stage ALU, branch, and redirect timing into the EX/MEM pipeline register.",
+      "artifact_key": "ex_boundary",
+      "stage": "EX",
+      "instance_patterns": [
+        "*uExMemReg*"
+      ],
+      "ref_name_patterns": [
+        "ExMemReg"
+      ],
+      "pin_name_patterns": [
+        "D"
+      ]
+    },
+    {
+      "key": "mem_boundary",
+      "label": "MEM / MEM-WB Boundary",
+      "description": "Memory return and writeback-payload timing into the MEM/WB pipeline register.",
+      "artifact_key": "mem_boundary",
+      "stage": "MEM",
+      "instance_patterns": [
+        "*uMemWbReg*"
+      ],
+      "ref_name_patterns": [
+        "MemWbReg"
+      ],
+      "pin_name_patterns": [
+        "D"
+      ]
+    },
+    {
+      "key": "wb_retire",
+      "label": "WB / Retire Sink",
+      "description": "Final writeback and retire timing into the retained timing sink register.",
+      "artifact_key": "wb_retire",
+      "stage": "WB",
+      "instance_patterns": [
+        "*TimingSinkReg*"
+      ],
+      "endpoint_patterns": [
+        "*TimingSinkReg*"
+      ],
+      "pin_name_patterns": [
+        "D"
+      ]
+    },
+    {
+      "key": "pc_feedback",
+      "label": "CF / Next-PC Redirect",
+      "description": "Branch, jump, trap, interrupt, and next-PC timing into the fetch-stage program-counter register.",
+      "artifact_key": "pc_feedback",
+      "stage": "CF",
+      "instance_patterns": [
+        "*uFetchStage/uPc*",
+        "*uPc*"
+      ],
+      "ref_name_patterns": [
+        "Pc"
+      ],
+      "endpoint_patterns": [
+        "*uFetchStage/uPc/*/D",
+        "*uPc/*/D"
+      ],
+      "pin_name_patterns": [
+        "D"
+      ]
+    }
+  ],
+  "family_active_classes": {
+    "if_boundary": [
+      "RTYPE",
+      "OPIMM",
+      "LOAD",
+      "STORE",
+      "BRANCH",
+      "UPPER_IMM",
+      "JUMP",
+      "SYSTEM"
+    ],
+    "id_boundary": [
+      "RTYPE",
+      "OPIMM",
+      "LOAD",
+      "STORE",
+      "BRANCH",
+      "UPPER_IMM",
+      "JUMP",
+      "SYSTEM"
+    ],
+    "ex_boundary": [
+      "RTYPE",
+      "OPIMM",
+      "LOAD",
+      "STORE",
+      "BRANCH",
+      "UPPER_IMM",
+      "JUMP",
+      "SYSTEM"
+    ],
+    "mem_boundary": [
+      "RTYPE",
+      "OPIMM",
+      "LOAD",
+      "STORE",
+      "UPPER_IMM",
+      "JUMP"
+    ],
+    "wb_retire": [
+      "RTYPE",
+      "OPIMM",
+      "LOAD",
+      "UPPER_IMM",
+      "JUMP"
+    ],
+    "pc_feedback": [
+      "BRANCH",
+      "JUMP",
+      "SYSTEM"
+    ]
+  },
+  "class_stage_candidate_map": {
+    "RTYPE": {
+      "IF": [
+        "if_boundary"
+      ],
+      "ID": [
+        "id_boundary"
+      ],
+      "EX": [
+        "ex_boundary"
+      ],
+      "WB": [
+        "wb_retire"
+      ]
+    },
+    "OPIMM": {
+      "IF": [
+        "if_boundary"
+      ],
+      "ID": [
+        "id_boundary"
+      ],
+      "EX": [
+        "ex_boundary"
+      ],
+      "WB": [
+        "wb_retire"
+      ]
+    },
+    "LOAD": {
+      "IF": [
+        "if_boundary"
+      ],
+      "ID": [
+        "id_boundary"
+      ],
+      "EX": [
+        "ex_boundary"
+      ],
+      "MEM": [
+        "mem_boundary"
+      ],
+      "WB": [
+        "wb_retire"
+      ]
+    },
+    "STORE": {
+      "IF": [
+        "if_boundary"
+      ],
+      "ID": [
+        "id_boundary"
+      ],
+      "EX": [
+        "ex_boundary"
+      ],
+      "MEM": [
+        "mem_boundary"
+      ]
+    },
+    "BRANCH": {
+      "IF": [
+        "if_boundary"
+      ],
+      "ID": [
+        "id_boundary"
+      ],
+      "EX": [
+        "ex_boundary"
+      ],
+      "CF": [
+        "pc_feedback"
+      ]
+    },
+    "UPPER_IMM": {
+      "IF": [
+        "if_boundary"
+      ],
+      "ID": [
+        "id_boundary"
+      ],
+      "EX": [
+        "ex_boundary"
+      ],
+      "WB": [
+        "wb_retire"
+      ]
+    },
+    "JUMP": {
+      "IF": [
+        "if_boundary"
+      ],
+      "ID": [
+        "id_boundary"
+      ],
+      "EX": [
+        "ex_boundary"
+      ],
+      "WB": [
+        "wb_retire"
+      ],
+      "CF": [
+        "pc_feedback"
+      ]
+    },
+    "SYSTEM": {
+      "IF": [
+        "if_boundary"
+      ],
+      "ID": [
+        "id_boundary"
+      ],
+      "EX": [
+        "ex_boundary"
+      ],
+      "CF": [
+        "pc_feedback"
+      ]
+    }
+  },
+  "mnemonic_stage_candidate_map": {
+    "jal": {
+      "IF": [
+        "if_boundary"
+      ],
+      "ID": [
+        "id_boundary"
+      ],
+      "EX": [
+        "ex_boundary"
+      ],
+      "WB": [
+        "wb_retire"
+      ],
+      "CF": [
+        "pc_feedback"
+      ]
+    },
+    "jalr": {
+      "IF": [
+        "if_boundary"
+      ],
+      "ID": [
+        "id_boundary"
+      ],
+      "EX": [
+        "ex_boundary"
+      ],
+      "WB": [
+        "wb_retire"
+      ],
+      "CF": [
+        "pc_feedback"
+      ]
+    },
+    "fence": {
+      "IF": [
+        "if_boundary"
+      ],
+      "ID": [
+        "id_boundary"
+      ],
+      "CF": [
+        "pc_feedback"
+      ]
+    },
+    "ecall": {
+      "IF": [
+        "if_boundary"
+      ],
+      "ID": [
+        "id_boundary"
+      ],
+      "EX": [
+        "ex_boundary"
+      ],
+      "CF": [
+        "pc_feedback"
+      ]
+    },
+    "ebreak": {
+      "IF": [
+        "if_boundary"
+      ],
+      "ID": [
+        "id_boundary"
+      ],
+      "EX": [
+        "ex_boundary"
+      ],
+      "CF": [
+        "pc_feedback"
+      ]
+    }
+  },
+  "implementation": {
+    "synth_directive": "PerformanceOptimized",
+    "opt_directive": "Explore",
+    "place_directive": "Explore",
+    "phys_opt_directive": "AggressiveExplore",
+    "route_directive": "Explore",
+    "post_route_phys_opt_directive": "AggressiveExplore",
+    "core_pblock_clock_region": ""
+  }
+}

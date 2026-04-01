@@ -1,0 +1,16 @@
+cp_class_maxpos_combo:5
+cp_frame_len:1
+cp_in_stall:none
+cp_input_class:dominant_peak
+cp_keep_kind:all_f
+cp_len_result_combo:0
+cp_len_term_combo:0
+cp_max_pos:first
+cp_out_stall:none
+cp_output_last:single
+cp_post_term_rearm:delayed
+cp_result_kind:normal
+cp_special_fp32:none
+cp_stall_pair_combo:0
+cp_term_kind:iLast_only
+cp_term_rearm_combo:0

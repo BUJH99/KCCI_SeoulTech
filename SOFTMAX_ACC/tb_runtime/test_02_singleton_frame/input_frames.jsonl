@@ -1,0 +1,1 @@
+{"frame_id":1,"reset_epoch":0,"scenario":"singleton_frame","input_class":"dominant_peak","in_stall":"none","out_stall":"none","keep_kind":"all_f","result_kind":"normal","reset_phase":"none","term_kind":"iLast_only","post_term_rearm":"delayed","special_kind":"none","data_hex_csv":"3f800000","keep_hex_csv":"f"}

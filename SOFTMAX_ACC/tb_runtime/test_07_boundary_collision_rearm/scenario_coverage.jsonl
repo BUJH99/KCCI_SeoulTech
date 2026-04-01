@@ -1,0 +1,3 @@
+{"name":"collision_len_cmax","checked_beats":1024,"frame_samples":1,"reset_samples":0,"coverage_pct":9.0}
+{"name":"rearm_back_to_back","checked_beats":3,"frame_samples":1,"reset_samples":0,"coverage_pct":9.6}
+{"name":"rearm_delayed","checked_beats":3,"frame_samples":1,"reset_samples":0,"coverage_pct":9.6}

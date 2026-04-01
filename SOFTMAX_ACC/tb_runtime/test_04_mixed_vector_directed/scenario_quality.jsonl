@@ -1,0 +1,5 @@
+{"name":"mixed_max_first","checked_beats":4,"mismatch_beats":0,"mismatch_rate_pct":0.0,"numeric_beats":4,"avg_abs_err":0.000000e+00,"max_abs_err":0.000000e+00,"avg_rel_err_pct":0.0,"max_rel_err_pct":0.0,"failed_frames":0}
+{"name":"mixed_max_middle","checked_beats":4,"mismatch_beats":0,"mismatch_rate_pct":0.0,"numeric_beats":4,"avg_abs_err":0.000000e+00,"max_abs_err":0.000000e+00,"avg_rel_err_pct":0.0,"max_rel_err_pct":0.0,"failed_frames":0}
+{"name":"mixed_max_last","checked_beats":4,"mismatch_beats":0,"mismatch_rate_pct":0.0,"numeric_beats":4,"avg_abs_err":0.000000e+00,"max_abs_err":0.000000e+00,"avg_rel_err_pct":0.0,"max_rel_err_pct":0.0,"failed_frames":0}
+{"name":"near_equal_middle","checked_beats":3,"mismatch_beats":0,"mismatch_rate_pct":0.0,"numeric_beats":3,"avg_abs_err":0.000000e+00,"max_abs_err":0.000000e+00,"avg_rel_err_pct":0.0,"max_rel_err_pct":0.0,"failed_frames":0}
+{"name":"near_equal_tie","checked_beats":3,"mismatch_beats":0,"mismatch_rate_pct":0.0,"numeric_beats":3,"avg_abs_err":0.000000e+00,"max_abs_err":0.000000e+00,"avg_rel_err_pct":0.0,"max_rel_err_pct":0.0,"failed_frames":0}

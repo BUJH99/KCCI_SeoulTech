@@ -1,0 +1,1876 @@
+/*
+[MODULE_INFO_START]
+Name: Alu
+Role: R-Type arithmetic and logic unit
+Summary:
+  - Executes the supported RV32I ALU operations
+  - Preserves signed and unsigned behavior per instruction definition
+[MODULE_INFO_END]
+*/
+
+`timescale 1ns / 1ps
+
+module Alu (
+  input  logic [31:0]        iA,
+  input  logic [31:0]        iB,
+  input  rv32i_pkg::alu_op_e iAluOp,
+  output logic [31:0]        oResult
+);
+
+  always_comb begin
+    oResult = '0;
+
+    unique case (iAluOp)
+      rv32i_pkg::ALU_ADD:  oResult = iA + iB;
+      rv32i_pkg::ALU_SUB:  oResult = iA - iB;
+      rv32i_pkg::ALU_SLL:  oResult = iA << iB[4:0];
+      rv32i_pkg::ALU_SLT:  oResult = {31'd0, ($signed(iA) < $signed(iB))};
+      rv32i_pkg::ALU_SLTU: oResult = {31'd0, (iA < iB)};
+      rv32i_pkg::ALU_XOR:  oResult = iA ^ iB;
+      rv32i_pkg::ALU_SRL:  oResult = iA >> iB[4:0];
+      rv32i_pkg::ALU_SRA:  oResult = $signed(iA) >>> iB[4:0];
+      rv32i_pkg::ALU_OR:   oResult = iA | iB;
+      rv32i_pkg::ALU_AND:  oResult = iA & iB;
+      default:  oResult = '0;
+    endcase
+  end
+
+endmodule
+  /*
+  [MODULE_INFO_START]
+  Name: AluDecoder
+  Role: RV32I ALU operation decoder
+  Summary:
+    - Decodes R-Type and OP-IMM funct fields into ALU operations
+    - Flags unsupported arithmetic encodings as illegal
+  [MODULE_INFO_END]
+  */
+
+  `timescale 1ns / 1ps
+
+  module AluDecoder (
+    input  logic [6:0]         iOpcode,
+    input  logic [2:0]         iFunct3,
+    input  logic [6:0]         iFunct7,
+    output rv32i_pkg::alu_op_e oAluOp,
+    output logic               oIllegal
+  );
+
+    always_comb begin
+      oAluOp   = rv32i_pkg::ALU_ADD;
+      oIllegal = 1'b0;
+
+      unique case (iOpcode)
+        rv32i_pkg::LP_OPCODE_RTYPE: begin
+          unique case ({iFunct7, iFunct3})
+            10'b0000000_000: oAluOp = rv32i_pkg::ALU_ADD;
+            10'b0100000_000: oAluOp = rv32i_pkg::ALU_SUB;
+            10'b0000000_001: oAluOp = rv32i_pkg::ALU_SLL;
+            10'b0000000_010: oAluOp = rv32i_pkg::ALU_SLT;
+            10'b0000000_011: oAluOp = rv32i_pkg::ALU_SLTU;
+            10'b0000000_100: oAluOp = rv32i_pkg::ALU_XOR;
+            10'b0000000_101: oAluOp = rv32i_pkg::ALU_SRL;
+            10'b0100000_101: oAluOp = rv32i_pkg::ALU_SRA;
+            10'b0000000_110: oAluOp = rv32i_pkg::ALU_OR;
+            10'b0000000_111: oAluOp = rv32i_pkg::ALU_AND;
+            default:         oIllegal = 1'b1;
+          endcase
+        end
+        rv32i_pkg::LP_OPCODE_OPIMM: begin
+          unique case (iFunct3)
+            3'b000: oAluOp = rv32i_pkg::ALU_ADD;
+            3'b010: oAluOp = rv32i_pkg::ALU_SLT;
+            3'b011: oAluOp = rv32i_pkg::ALU_SLTU;
+            3'b100: oAluOp = rv32i_pkg::ALU_XOR;
+            3'b110: oAluOp = rv32i_pkg::ALU_OR;
+            3'b111: oAluOp = rv32i_pkg::ALU_AND;
+            3'b001: begin
+              oAluOp   = rv32i_pkg::ALU_SLL;
+              oIllegal = (iFunct7 != 7'b0000000);
+            end
+            3'b101: begin
+              unique case (iFunct7)
+                7'b0000000: oAluOp = rv32i_pkg::ALU_SRL;
+                7'b0100000: oAluOp = rv32i_pkg::ALU_SRA;
+                default:    oIllegal = 1'b1;
+              endcase
+            end
+            default: oIllegal = 1'b1;
+          endcase
+        end
+        default: oIllegal = 1'b1;
+      endcase
+    end
+
+  endmodule
+/*
+[MODULE_INFO_START]
+Name: AluOperandSel
+Role: ALU operand source selector
+Summary:
+  - Selects the ALU A operand from RS1, PC, or zero based on control decode
+  - Selects the ALU B operand from RS2 or the decoded immediate value
+[MODULE_INFO_END]
+*/
+
+`timescale 1ns / 1ps
+
+module AluOperandSel (
+  input  logic [31:0]             iRs1Data,
+  input  logic [31:0]             iRs2Data,
+  input  logic [31:0]             iPc,
+  input  logic [31:0]             iImm,
+  input  rv32i_pkg::alu_a_sel_e   iAluASel,
+  input  rv32i_pkg::alu_b_sel_e   iAluBSel,
+  output logic [31:0]             oAluA,
+  output logic [31:0]             oAluB
+);
+
+  always_comb begin
+    oAluA = iRs1Data;
+    oAluB = iRs2Data;
+
+    unique case (iAluASel)
+      rv32i_pkg::ALUA_RS1:  oAluA = iRs1Data;
+      rv32i_pkg::ALUA_PC:   oAluA = iPc;
+      rv32i_pkg::ALUA_ZERO: oAluA = '0;
+      default:              oAluA = iRs1Data;
+    endcase
+
+    unique case (iAluBSel)
+      rv32i_pkg::ALUB_RS2: oAluB = iRs2Data;
+      rv32i_pkg::ALUB_IMM: oAluB = iImm;
+      default:             oAluB = iRs2Data;
+    endcase
+  end
+
+endmodule
+/*
+[MODULE_INFO_START]
+Name: BranchComparator
+Role: RV32I branch condition comparator
+Summary:
+  - Compares register operands according to the decoded branch operation
+  - Emits the branch-taken decision for signed and unsigned RV32I branches
+[MODULE_INFO_END]
+*/
+
+`timescale 1ns / 1ps
+
+module BranchComparator (
+  input  logic [31:0]         iRs1Data,
+  input  logic [31:0]         iRs2Data,
+  input  rv32i_pkg::branch_e  iBranchOp,
+  output logic                oBranchTaken
+);
+
+  always_comb begin
+    oBranchTaken = 1'b0;
+
+    unique case (iBranchOp)
+      rv32i_pkg::BR_NONE: oBranchTaken = 1'b0;
+      rv32i_pkg::BR_EQ:   oBranchTaken = (iRs1Data == iRs2Data);
+      rv32i_pkg::BR_NE:   oBranchTaken = (iRs1Data != iRs2Data);
+      rv32i_pkg::BR_LT:   oBranchTaken = ($signed(iRs1Data) < $signed(iRs2Data));
+      rv32i_pkg::BR_GE:   oBranchTaken = ($signed(iRs1Data) >= $signed(iRs2Data));
+      rv32i_pkg::BR_LTU:  oBranchTaken = (iRs1Data < iRs2Data);
+      rv32i_pkg::BR_GEU:  oBranchTaken = (iRs1Data >= iRs2Data);
+      default:            oBranchTaken = 1'b0;
+    endcase
+  end
+
+endmodule
+/*
+[MODULE_INFO_START]
+Name: BranchDecoder
+Role: Branch condition decoder
+Summary:
+  - Maps branch funct3 encodings to compare operations
+  - Flags unsupported branch sub-encodings as illegal
+[MODULE_INFO_END]
+*/
+
+`timescale 1ns / 1ps
+
+module BranchDecoder (
+  input  logic [2:0]          iFunct3,
+  output rv32i_pkg::branch_e  oBranchOp,
+  output logic                oIllegal
+);
+
+  always_comb begin
+    oBranchOp = rv32i_pkg::BR_NONE;
+    oIllegal  = 1'b0;
+
+    unique case (iFunct3)
+      3'b000: oBranchOp = rv32i_pkg::BR_EQ;
+      3'b001: oBranchOp = rv32i_pkg::BR_NE;
+      3'b100: oBranchOp = rv32i_pkg::BR_LT;
+      3'b101: oBranchOp = rv32i_pkg::BR_GE;
+      3'b110: oBranchOp = rv32i_pkg::BR_LTU;
+      3'b111: oBranchOp = rv32i_pkg::BR_GEU;
+      default: oIllegal = 1'b1;
+    endcase
+  end
+
+endmodule
+/*
+[MODULE_INFO_START]
+Name: ControlComposer
+Role: Final control decode composer
+Summary:
+  - Selects class-specific control outputs from ISA-aligned sub-decoders
+  - Applies illegal-instruction and trap policy before driving final control
+[MODULE_INFO_END]
+*/
+
+`timescale 1ns / 1ps
+
+module ControlComposer (
+  input  logic                     iIllegalOpcode,
+  input  rv32i_pkg::opcode_class_e iOpcodeClass,
+  input  rv32i_pkg::alu_op_e       iItypeAluOp,
+  input  logic                     iItypeAluIllegal,
+  input  rv32i_pkg::alu_a_sel_e    iJumpAluASel,
+  input  logic                     iJumpIllegal,
+  input  rv32i_pkg::imm_sel_e      iJumpImmSel,
+  input  rv32i_pkg::pc_sel_e       iJumpPcSel,
+  input  logic                     iLoadIllegal,
+  input  logic                     iLoadUnsigned,
+  input  rv32i_pkg::mem_size_e     iLoadMemSize,
+  input  rv32i_pkg::branch_e       iBranchOp,
+  input  logic                     iBranchIllegal,
+  input  rv32i_pkg::alu_op_e       iRtypeAluOp,
+  input  logic                     iRtypeIllegal,
+  input  logic                     iStoreIllegal,
+  input  rv32i_pkg::mem_size_e     iStoreMemSize,
+  input  logic                     iSystemIllegal,
+  input  rv32i_pkg::sys_op_e       iSysOp,
+  input  logic                     iTrapReq,
+  input  rv32i_pkg::alu_a_sel_e    iUtypeAluASel,
+  input  logic                     iUtypeIllegal,
+  output logic                     oRegWrite,
+  output logic                     oMemRead,
+  output logic                     oMemWrite,
+  output logic                     oLoadUnsigned,
+  output rv32i_pkg::mem_size_e     oMemSize,
+  output rv32i_pkg::alu_a_sel_e    oAluASel,
+  output rv32i_pkg::alu_b_sel_e    oAluBSel,
+  output rv32i_pkg::imm_sel_e      oImmSel,
+  output rv32i_pkg::branch_e       oBranchOp,
+  output rv32i_pkg::pc_sel_e       oPcSel,
+  output rv32i_pkg::wb_sel_e       oWbSel,
+  output rv32i_pkg::alu_op_e       oAluOp,
+  output rv32i_pkg::sys_op_e       oSysOp,
+  output logic                     oTrapReq,
+  output logic                     oIllegal
+);
+
+  always_comb begin
+    oRegWrite     = 1'b0;
+    oMemRead      = 1'b0;
+    oMemWrite     = 1'b0;
+    oLoadUnsigned = 1'b0;
+    oMemSize      = rv32i_pkg::MEM_WORD;
+    oAluASel      = rv32i_pkg::ALUA_RS1;
+    oAluBSel      = rv32i_pkg::ALUB_RS2;
+    oImmSel       = rv32i_pkg::IMM_NONE;
+    oBranchOp     = rv32i_pkg::BR_NONE;
+    oPcSel        = rv32i_pkg::PC_PLUS4;
+    oWbSel        = rv32i_pkg::WB_ALU;
+    oAluOp        = rv32i_pkg::ALU_ADD;
+    oSysOp        = rv32i_pkg::SYS_NONE;
+    oTrapReq      = 1'b0;
+    oIllegal      = iIllegalOpcode;
+
+    unique case (iOpcodeClass)
+      rv32i_pkg::OPCODE_CLASS_RTYPE: begin
+        oRegWrite = 1'b1;
+        oAluOp    = iRtypeAluOp;
+        oIllegal  = oIllegal || iRtypeIllegal;
+      end
+      rv32i_pkg::OPCODE_CLASS_OPIMM: begin
+        oRegWrite = 1'b1;
+        oAluBSel  = rv32i_pkg::ALUB_IMM;
+        oImmSel   = rv32i_pkg::IMM_I;
+        oAluOp    = iItypeAluOp;
+        oIllegal  = oIllegal || iItypeAluIllegal;
+      end
+      rv32i_pkg::OPCODE_CLASS_LOAD: begin
+        oRegWrite     = 1'b1;
+        oMemRead      = 1'b1;
+        oLoadUnsigned = iLoadUnsigned;
+        oMemSize      = iLoadMemSize;
+        oAluBSel      = rv32i_pkg::ALUB_IMM;
+        oImmSel       = rv32i_pkg::IMM_I;
+        oWbSel        = rv32i_pkg::WB_MEM;
+        oIllegal      = oIllegal || iLoadIllegal;
+      end
+      rv32i_pkg::OPCODE_CLASS_STORE: begin
+        oMemWrite = 1'b1;
+        oMemSize  = iStoreMemSize;
+        oAluBSel  = rv32i_pkg::ALUB_IMM;
+        oImmSel   = rv32i_pkg::IMM_S;
+        oIllegal  = oIllegal || iStoreIllegal;
+      end
+      rv32i_pkg::OPCODE_CLASS_BRANCH: begin
+        oAluASel  = rv32i_pkg::ALUA_PC;
+        oAluBSel  = rv32i_pkg::ALUB_IMM;
+        oImmSel   = rv32i_pkg::IMM_B;
+        oBranchOp = iBranchOp;
+        oPcSel    = rv32i_pkg::PC_BRANCH;
+        oIllegal  = oIllegal || iBranchIllegal;
+      end
+      rv32i_pkg::OPCODE_CLASS_UPPER_IMM: begin
+        oRegWrite = 1'b1;
+        oAluASel  = iUtypeAluASel;
+        oAluBSel  = rv32i_pkg::ALUB_IMM;
+        oImmSel   = rv32i_pkg::IMM_U;
+        oIllegal  = oIllegal || iUtypeIllegal;
+      end
+      rv32i_pkg::OPCODE_CLASS_JUMP: begin
+        oRegWrite = 1'b1;
+        oAluASel  = iJumpAluASel;
+        oAluBSel  = rv32i_pkg::ALUB_IMM;
+        oImmSel   = iJumpImmSel;
+        oPcSel    = iJumpPcSel;
+        oWbSel    = rv32i_pkg::WB_PC4;
+        oIllegal  = oIllegal || iJumpIllegal;
+      end
+      rv32i_pkg::OPCODE_CLASS_SYSTEM: begin
+        oSysOp   = iSysOp;
+        oTrapReq = iTrapReq;
+        oIllegal = oIllegal || iSystemIllegal;
+      end
+      default: begin
+        // Keep default-safe outputs when the opcode class is unsupported.
+      end
+    endcase
+
+    if (oIllegal || oTrapReq) begin
+      oRegWrite     = 1'b0;
+      oMemRead      = 1'b0;
+      oMemWrite     = 1'b0;
+      oLoadUnsigned = 1'b0;
+      oMemSize      = rv32i_pkg::MEM_WORD;
+      oBranchOp     = rv32i_pkg::BR_NONE;
+    end
+
+    if (oIllegal) begin
+      oAluASel      = rv32i_pkg::ALUA_RS1;
+      oAluBSel      = rv32i_pkg::ALUB_RS2;
+      oImmSel       = rv32i_pkg::IMM_NONE;
+      oPcSel        = rv32i_pkg::PC_PLUS4;
+      oWbSel        = rv32i_pkg::WB_ALU;
+      oAluOp        = rv32i_pkg::ALU_ADD;
+      oSysOp        = rv32i_pkg::SYS_NONE;
+      oTrapReq      = 1'b0;
+    end
+  end
+
+endmodule
+/*
+[MODULE_INFO_START]
+Name: ControlUnit
+Role: Instruction-level control decoder
+Summary:
+  - Classifies the opcode and delegates decode to ISA-aligned sub-decoders
+  - Delegates final control composition to a single post-decode submodule
+[MODULE_INFO_END]
+*/
+
+`timescale 1ns / 1ps
+
+module ControlUnit (
+  input  logic                    [31:0] iInstr,
+  output logic                           oRegWrite,
+  output logic                           oMemRead,
+  output logic                           oMemWrite,
+  output logic                           oLoadUnsigned,
+  output rv32i_pkg::mem_size_e           oMemSize,
+  output rv32i_pkg::alu_a_sel_e          oAluASel,
+  output rv32i_pkg::alu_b_sel_e          oAluBSel,
+  output rv32i_pkg::imm_sel_e            oImmSel,
+  output rv32i_pkg::branch_e             oBranchOp,
+  output rv32i_pkg::pc_sel_e             oPcSel,
+  output rv32i_pkg::wb_sel_e             oWbSel,
+  output rv32i_pkg::alu_op_e             oAluOp,
+  output rv32i_pkg::sys_op_e             oSysOp,
+  output logic                           oTrapReq,
+  output logic                           oIllegal
+);
+
+  logic [6:0] opcode;
+  logic [2:0] funct3;
+  logic [6:0] instr31To25;
+  logic [11:0] instr31To20;
+
+  rv32i_pkg::opcode_class_e opcodeClass;
+
+  logic illegalOpcode;
+  logic rtypeIllegal;
+  logic itypeAluIllegal;
+  logic loadIllegal;
+  logic storeIllegal;
+  logic branchIllegal;
+  logic utypeIllegal;
+  logic jumpIllegal;
+  logic systemIllegal;
+  logic loadUnsignedDecoded;
+  logic trapReqDecoded;
+
+  rv32i_pkg::alu_op_e     rtypeAluOp;
+  rv32i_pkg::alu_op_e     itypeAluOp;
+  rv32i_pkg::mem_size_e   loadMemSize;
+  rv32i_pkg::mem_size_e   storeMemSize;
+  rv32i_pkg::branch_e     branchOpDecoded;
+  rv32i_pkg::alu_a_sel_e  utypeAluASel;
+  rv32i_pkg::alu_a_sel_e  jumpAluASel;
+  rv32i_pkg::imm_sel_e    jumpImmSel;
+  rv32i_pkg::pc_sel_e     jumpPcSel;
+  rv32i_pkg::sys_op_e     sysOpDecoded;
+
+  InstrFields uInstrFields (
+    .iInstr(iInstr),
+    .oOpcode(opcode),
+    .oFunct3(funct3),
+    .oInstr31To25(instr31To25),
+    .oInstr31To20(instr31To20)
+  );
+
+  MainDecoder uMainDecoder (
+    .iOpcode(opcode),
+    .oOpcodeClass(opcodeClass),
+    .oIllegalOpcode(illegalOpcode)
+  );
+
+  RtypeDecoder uRtypeDecoder (
+    .iFunct3(funct3),
+    .iFunct7(instr31To25),
+    .oAluOp(rtypeAluOp),
+    .oIllegal(rtypeIllegal)
+  );
+
+  ItypeAluDecoder uItypeAluDecoder (
+    .iFunct3(funct3),
+    .iInstr31To25(instr31To25),
+    .oAluOp(itypeAluOp),
+    .oIllegal(itypeAluIllegal)
+  );
+
+  LoadDecoder uLoadDecoder (
+    .iFunct3(funct3),
+    .oMemSize(loadMemSize),
+    .oLoadUnsigned(loadUnsignedDecoded),
+    .oIllegal(loadIllegal)
+  );
+
+  StoreDecoder uStoreDecoder (
+    .iFunct3(funct3),
+    .oMemSize(storeMemSize),
+    .oIllegal(storeIllegal)
+  );
+
+  BranchDecoder uBranchDecoder (
+    .iFunct3(funct3),
+    .oBranchOp(branchOpDecoded),
+    .oIllegal(branchIllegal)
+  );
+
+  UtypeDecoder uUtypeDecoder (
+    .iOpcode(opcode),
+    .oAluASel(utypeAluASel),
+    .oIllegal(utypeIllegal)
+  );
+
+  JumpDecoder uJumpDecoder (
+    .iOpcode(opcode),
+    .iFunct3(funct3),
+    .oAluASel(jumpAluASel),
+    .oImmSel(jumpImmSel),
+    .oPcSel(jumpPcSel),
+    .oIllegal(jumpIllegal)
+  );
+
+  SystemDecoder uSystemDecoder (
+    .iOpcode(opcode),
+    .iFunct3(funct3),
+    .iImm12(instr31To20),
+    .oSysOp(sysOpDecoded),
+    .oTrapReq(trapReqDecoded),
+    .oIllegal(systemIllegal)
+  );
+
+  ControlComposer uControlComposer (
+    .iIllegalOpcode(illegalOpcode),
+    .iOpcodeClass(opcodeClass),
+    .iItypeAluOp(itypeAluOp),
+    .iItypeAluIllegal(itypeAluIllegal),
+    .iJumpAluASel(jumpAluASel),
+    .iJumpIllegal(jumpIllegal),
+    .iJumpImmSel(jumpImmSel),
+    .iJumpPcSel(jumpPcSel),
+    .iLoadIllegal(loadIllegal),
+    .iLoadUnsigned(loadUnsignedDecoded),
+    .iLoadMemSize(loadMemSize),
+    .iBranchOp(branchOpDecoded),
+    .iBranchIllegal(branchIllegal),
+    .iRtypeAluOp(rtypeAluOp),
+    .iRtypeIllegal(rtypeIllegal),
+    .iStoreIllegal(storeIllegal),
+    .iStoreMemSize(storeMemSize),
+    .iSystemIllegal(systemIllegal),
+    .iSysOp(sysOpDecoded),
+    .iTrapReq(trapReqDecoded),
+    .iUtypeAluASel(utypeAluASel),
+    .iUtypeIllegal(utypeIllegal),
+    .oRegWrite(oRegWrite),
+    .oMemRead(oMemRead),
+    .oMemWrite(oMemWrite),
+    .oLoadUnsigned(oLoadUnsigned),
+    .oMemSize(oMemSize),
+    .oAluASel(oAluASel),
+    .oAluBSel(oAluBSel),
+    .oImmSel(oImmSel),
+    .oBranchOp(oBranchOp),
+    .oPcSel(oPcSel),
+    .oWbSel(oWbSel),
+    .oAluOp(oAluOp),
+    .oSysOp(oSysOp),
+    .oTrapReq(oTrapReq),
+    .oIllegal(oIllegal)
+  );
+
+endmodule
+/*
+[MODULE_INFO_START]
+Name: CoreTrapGate
+Role: Top-level trap and side-effect gating glue
+Summary:
+  - Combines decode, PC, and data-memory fault conditions into pre-trap and core-trap signals
+  - Gates PC write and register write while preserving the current memory request policy
+[MODULE_INFO_END]
+*/
+
+`timescale 1ns / 1ps
+
+module CoreTrapGate (
+  input  logic iIllegal,
+  input  logic iTrapReq,
+  input  logic iInstrAddrMisaligned,
+  input  logic iDataMisaligned,
+  input  logic iRegWriteReq,
+  input  logic iMemReadReq,
+  input  logic iMemWriteReq,
+  output logic oPreTrap,
+  output logic oCoreTrap,
+  output logic oPcWe,
+  output logic oRegWrite,
+  output logic oMemRead,
+  output logic oMemWrite
+);
+
+  assign oPreTrap  = iIllegal || iTrapReq || iInstrAddrMisaligned;
+  assign oCoreTrap = oPreTrap || iDataMisaligned;
+  assign oPcWe     = !oCoreTrap;
+  assign oRegWrite = iRegWriteReq && !oCoreTrap;
+  assign oMemRead  = iMemReadReq;
+  assign oMemWrite = iMemWriteReq;
+
+endmodule
+/*
+[MODULE_INFO_START]
+Name: Datapath
+Role: Register read, ALU execute, memory access, and write-back path
+Summary:
+  - Reuses instruction field extraction for register addressing
+  - Keeps data-memory access and write-back selection local for single-cycle execution
+[MODULE_INFO_END]
+*/
+
+`timescale 1ns / 1ps
+
+module Datapath (
+  input  logic                    iClk,
+  input  logic                    iRstn,
+  input  logic [31:0]             iPc,
+  input  logic [31:0]             iInstr,
+  input  logic                    iRegWrite,
+  input  logic                    iLoadUnsigned,
+  input  logic                    iMemRead,
+  input  logic                    iMemWrite,
+  input  rv32i_pkg::mem_size_e    iMemSize,
+  input  rv32i_pkg::alu_a_sel_e   iAluASel,
+  input  rv32i_pkg::alu_b_sel_e   iAluBSel,
+  input  rv32i_pkg::imm_sel_e     iImmSel,
+  input  rv32i_pkg::branch_e      iBranchOp,
+  input  rv32i_pkg::wb_sel_e      iWbSel,
+  input  rv32i_pkg::alu_op_e      iAluOp,
+  output logic [31:0]             oAluResult,
+  output logic [31:0]             oPcTarget,
+  output logic [31:0]             oJalrTarget,
+  output logic                    oBranchTaken,
+  output logic                    oDataMisaligned,
+  output logic [31:0]             oMemAddr,
+  output logic [31:0]             oMemRdData,
+  output logic [31:0]             oMemRdDataQualified,
+  output logic [31:0]             oRs2Data,
+  output logic [31:0]             oRdWrData,
+  output logic                    oTimingProbe
+);
+
+  logic [4:0]  rs1Addr;
+  logic [4:0]  rs2Addr;
+  logic [4:0]  rdAddr;
+  logic [31:0] rs1RdData;
+  logic [31:0] rs2RdData;
+  logic [31:0] imm;
+  logic [31:0] aluA;
+  logic [31:0] aluB;
+  logic [31:0] aluResult;
+  logic [31:0] memAddr;
+  logic [31:0] memRdData;
+  logic [31:0] rdWrData;
+  logic [31:0] memRdDataQualified;
+  logic        dataMisaligned;
+  logic        branchTaken;
+  logic [31:0] pcPlus4;
+
+  InstrFields uInstrFields (
+    .iInstr(iInstr),
+    .oOpcode(),
+    .oFunct3(),
+    .oInstr31To25(),
+    .oInstr31To20(),
+    .oRs1(rs1Addr),
+    .oRs2(rs2Addr),
+    .oRd(rdAddr)
+  );
+
+  Regfile uRegfile (
+    .iClk(iClk),
+    .iRstn(iRstn),
+    .iRs1Addr(rs1Addr),
+    .iRs2Addr(rs2Addr),
+    .iRdAddr(rdAddr),
+    .iRdWrData(rdWrData),
+    .iRdWrEn(iRegWrite),
+    .oRs1RdData(rs1RdData),
+    .oRs2RdData(rs2RdData),
+    .oTimingProbe(oTimingProbe)
+  );
+
+  ImmGen uImmGen (
+    .iInstr(iInstr),
+    .iImmSel(iImmSel),
+    .oImm(imm)
+  );
+
+  AluOperandSel uAluOperandSel (
+    .iRs1Data(rs1RdData),
+    .iRs2Data(rs2RdData),
+    .iPc(iPc),
+    .iImm(imm),
+    .iAluASel(iAluASel),
+    .iAluBSel(iAluBSel),
+    .oAluA(aluA),
+    .oAluB(aluB)
+  );
+
+  Alu uAlu (
+    .iA(aluA),
+    .iB(aluB),
+    .iAluOp(iAluOp),
+    .oResult(aluResult)
+  );
+
+  PcTargetGen uPcTargetGen (
+    .iPc(iPc),
+    .iRs1Data(rs1RdData),
+    .iImm(imm),
+    .oPcTarget(oPcTarget),
+    .oJalrTarget(oJalrTarget),
+    .oPcPlus4(pcPlus4)
+  );
+
+  DataRam uDataRam (
+    .iClk(iClk),
+    .iMemRead(iMemRead),
+    .iWrEn(iMemWrite),
+    .iMemSize(iMemSize),
+    .iLoadUnsigned(iLoadUnsigned),
+    .iAddr(memAddr),
+    .iWrData(rs2RdData),
+    .oRdData(memRdData),
+    .oMisaligned(dataMisaligned)
+  );
+
+  always_comb begin
+    memRdDataQualified = '0;
+
+    if (iMemRead && !dataMisaligned) begin
+      memRdDataQualified = memRdData;
+    end
+  end
+
+  always_comb begin
+    unique case (iWbSel)
+      rv32i_pkg::WB_MEM: rdWrData = memRdDataQualified;
+      rv32i_pkg::WB_PC4: rdWrData = pcPlus4;
+      default:           rdWrData = aluResult;
+    endcase
+  end
+
+  BranchComparator uBranchComparator (
+    .iRs1Data(rs1RdData),
+    .iRs2Data(rs2RdData),
+    .iBranchOp(iBranchOp),
+    .oBranchTaken(branchTaken)
+  );
+
+  assign memAddr = rs1RdData + imm;
+  assign oAluResult           = aluResult;
+  assign oBranchTaken         = branchTaken;
+  assign oDataMisaligned      = dataMisaligned;
+  assign oMemAddr             = memAddr;
+  assign oMemRdData           = memRdData;
+  assign oMemRdDataQualified  = memRdDataQualified;
+  assign oRs2Data             = rs2RdData;
+  assign oRdWrData            = rdWrData;
+
+endmodule
+/*
+[MODULE_INFO_START]
+Name: DataRam
+Role: Data memory wrapper
+Summary:
+  - Provides word-oriented storage for RV32I load/store behavior
+  - Separates misalignment qualification from architectural readback gating
+[MODULE_INFO_END]
+*/
+
+`timescale 1ns / 1ps
+
+module DataRam #(
+  parameter int unsigned P_ADDR_WIDTH = 8,
+  parameter int unsigned P_DATA_WIDTH = 32
+)(
+  input  logic                    iClk,
+  input  logic                    iMemRead,
+  input  logic                    iWrEn,
+  input  rv32i_pkg::mem_size_e    iMemSize,
+  input  logic                    iLoadUnsigned,
+  input  logic [31:0]             iAddr,
+  input  logic [P_DATA_WIDTH-1:0] iWrData,
+  output logic [P_DATA_WIDTH-1:0] oRdData,
+  output logic                    oMisaligned
+);
+
+  localparam int unsigned LP_DEPTH = (1 << P_ADDR_WIDTH);
+
+  (* ram_style = "distributed" *) logic [P_DATA_WIDTH-1:0] memRam [0:LP_DEPTH-1];
+  logic [P_ADDR_WIDTH-1:0] wordAddr;
+  logic [31:0]             rdWord;
+  logic [7:0]              rdByte;
+  logic [15:0]             rdHalf;
+  logic [31:0]             rdDataRaw;
+  logic                    loadMisaligned;
+  logic                    storeMisaligned;
+
+  assign wordAddr = iAddr[P_ADDR_WIDTH+1:2];
+  assign rdWord  = memRam[wordAddr];
+
+  always_comb begin
+    rdByte = rdWord[7:0];
+
+    unique case (iAddr[1:0])
+      2'd0:    rdByte = rdWord[7:0];
+      2'd1:    rdByte = rdWord[15:8];
+      2'd2:    rdByte = rdWord[23:16];
+      2'd3:    rdByte = rdWord[31:24];
+      default: rdByte = rdWord[7:0];
+    endcase
+  end
+
+  always_comb begin
+    rdHalf = rdWord[15:0];
+
+    unique case (iAddr[1])
+      1'b0:    rdHalf = rdWord[15:0];
+      1'b1:    rdHalf = rdWord[31:16];
+      default: rdHalf = rdWord[15:0];
+    endcase
+  end
+
+  always_comb begin
+    loadMisaligned  = 1'b0;
+    storeMisaligned = 1'b0;
+
+    if (iMemRead) begin
+      unique case (iMemSize)
+        rv32i_pkg::MEM_BYTE: loadMisaligned = 1'b0;
+        rv32i_pkg::MEM_HALF: loadMisaligned = iAddr[0];
+        rv32i_pkg::MEM_WORD: loadMisaligned = (iAddr[1:0] != 2'b00);
+        default:             loadMisaligned = 1'b0;
+      endcase
+    end
+
+    if (iWrEn) begin
+      unique case (iMemSize)
+        rv32i_pkg::MEM_BYTE: storeMisaligned = 1'b0;
+        rv32i_pkg::MEM_HALF: storeMisaligned = iAddr[0];
+        rv32i_pkg::MEM_WORD: storeMisaligned = (iAddr[1:0] != 2'b00);
+        default:             storeMisaligned = 1'b0;
+      endcase
+    end
+  end
+
+  assign oMisaligned = loadMisaligned || storeMisaligned;
+
+  always_comb begin
+    rdDataRaw = rdWord;
+
+    unique case (iMemSize)
+      rv32i_pkg::MEM_BYTE: begin
+        if (iLoadUnsigned) begin
+          rdDataRaw = {24'd0, rdByte};
+        end else begin
+          rdDataRaw = {{24{rdByte[7]}}, rdByte};
+        end
+      end
+      rv32i_pkg::MEM_HALF: begin
+        if (iLoadUnsigned) begin
+          rdDataRaw = {16'd0, rdHalf};
+        end else begin
+          rdDataRaw = {{16{rdHalf[15]}}, rdHalf};
+        end
+      end
+      rv32i_pkg::MEM_WORD: begin
+        rdDataRaw = rdWord;
+      end
+      default: begin
+        rdDataRaw = rdWord;
+      end
+    endcase
+  end
+
+  assign oRdData = rdDataRaw;
+
+  always_ff @(posedge iClk) begin
+    if (iWrEn && !storeMisaligned) begin
+      unique case (iMemSize)
+        rv32i_pkg::MEM_BYTE: begin
+          memRam[wordAddr][(iAddr[1:0] * 8) +: 8] <= iWrData[7:0];
+        end
+        rv32i_pkg::MEM_HALF: begin
+          memRam[wordAddr][(iAddr[1] * 16) +: 16] <= iWrData[15:0];
+        end
+        rv32i_pkg::MEM_WORD: begin
+          memRam[wordAddr] <= iWrData;
+        end
+        default: begin
+          memRam[wordAddr] <= iWrData;
+        end
+      endcase
+    end
+  end
+
+endmodule
+/*
+[MODULE_INFO_START]
+Name: ImmGen
+Role: RV32I immediate generator
+Summary:
+  - Expands instruction immediates for I/S/B/U/J formats
+  - Keeps immediate decode centralized away from control and top-level logic
+[MODULE_INFO_END]
+*/
+
+`timescale 1ns / 1ps
+
+module ImmGen (
+  input  logic [31:0]           iInstr,
+  input  rv32i_pkg::imm_sel_e   iImmSel,
+  output logic [31:0]           oImm
+);
+
+  always_comb begin
+    oImm = '0;
+
+    unique case (iImmSel)
+      rv32i_pkg::IMM_I: oImm = {{20{iInstr[31]}}, iInstr[31:20]};
+      rv32i_pkg::IMM_S: oImm = {{20{iInstr[31]}}, iInstr[31:25], iInstr[11:7]};
+      rv32i_pkg::IMM_B: oImm = {{19{iInstr[31]}}, iInstr[31], iInstr[7], iInstr[30:25], iInstr[11:8], 1'b0};
+      rv32i_pkg::IMM_U: oImm = {iInstr[31:12], 12'b0};
+      rv32i_pkg::IMM_J: oImm = {{11{iInstr[31]}}, iInstr[31], iInstr[19:12], iInstr[20], iInstr[30:21], 1'b0};
+      default:          oImm = '0;
+    endcase
+  end
+
+endmodule
+/*
+[MODULE_INFO_START]
+Name: InstrFields
+Role: Instruction bit-field extractor
+Summary:
+  - Breaks a 32-bit instruction into opcode/funct/register fields
+  - Centralizes common bit-slice extraction for decode and datapath reuse
+[MODULE_INFO_END]
+*/
+
+`timescale 1ns / 1ps
+
+module InstrFields (
+  input  logic [31:0] iInstr,
+  output logic [6:0]  oOpcode,
+  output logic [2:0]  oFunct3,
+  output logic [6:0]  oInstr31To25,
+  output logic [11:0] oInstr31To20,
+  output logic [4:0]  oRs1,
+  output logic [4:0]  oRs2,
+  output logic [4:0]  oRd
+);
+
+  assign oOpcode      = iInstr[6:0];
+  assign oRd          = iInstr[11:7];
+  assign oFunct3      = iInstr[14:12];
+  assign oRs1         = iInstr[19:15];
+  assign oRs2         = iInstr[24:20];
+  assign oInstr31To25 = iInstr[31:25];
+  assign oInstr31To20 = iInstr[31:20];
+
+endmodule
+/*
+[MODULE_INFO_START]
+Name: InstrRom
+Role: Instruction ROM wrapper
+Summary:
+  - Provides word-aligned combinational instruction fetch
+  - Keeps storage as an inferred ROM array for bring-up
+[MODULE_INFO_END]
+*/
+
+`timescale 1ns / 1ps
+
+module InstrRom #(
+  parameter int unsigned P_ADDR_WIDTH = 8,
+  parameter int unsigned P_DATA_WIDTH = 32,
+  parameter string       P_INIT_FILE  = "Project/RISCV_32I_SINGLE/src/InstructionFORTIMING.mem"
+)(
+  input  logic [31:0]             iAddr,
+  output logic [P_DATA_WIDTH-1:0] oInstr
+);
+
+  localparam int unsigned           LP_DEPTH     = (1 << P_ADDR_WIDTH);
+  localparam logic [P_DATA_WIDTH-1:0] LP_NOP_INSTR = 32'h0000_0013;
+
+  (* rom_style = "distributed" *) logic [P_DATA_WIDTH-1:0] memRom [0:LP_DEPTH-1];
+  logic [P_ADDR_WIDTH-1:0] wordAddr;
+  logic                    addrInRange;
+  logic                    addrWordAligned;
+  integer                  idx;
+
+  assign wordAddr         = iAddr[P_ADDR_WIDTH+1:2];
+  assign addrInRange      = (iAddr[31:2] < LP_DEPTH);
+  assign addrWordAligned  = (iAddr[1:0] == 2'b00);
+
+  initial begin : init_mem_rom
+    for (idx = 0; idx < LP_DEPTH; idx = idx + 1) begin
+      memRom[idx] = LP_NOP_INSTR;
+    end
+
+    $readmemh(P_INIT_FILE, memRom);
+  end
+
+  always_comb begin
+    oInstr = LP_NOP_INSTR;
+    if (addrInRange && addrWordAligned) begin
+      oInstr = memRom[wordAddr];
+    end
+  end
+
+endmodule
+/*
+[MODULE_INFO_START]
+Name: ItypeAluDecoder
+Role: RV32I I-type ALU decoder
+Summary:
+  - Decodes I-type arithmetic immediates into ALU operations
+  - Uses shift-immediate upper bits by their ISA meaning instead of a generic funct7 label
+[MODULE_INFO_END]
+*/
+
+`timescale 1ns / 1ps
+
+module ItypeAluDecoder (
+  input  logic [2:0]         iFunct3,
+  input  logic [6:0]         iInstr31To25,
+  output rv32i_pkg::alu_op_e oAluOp,
+  output logic               oIllegal
+);
+
+  always_comb begin
+    oAluOp   = rv32i_pkg::ALU_ADD;
+    oIllegal = 1'b0;
+
+    unique case (iFunct3)
+      3'b000: oAluOp = rv32i_pkg::ALU_ADD;
+      3'b010: oAluOp = rv32i_pkg::ALU_SLT;
+      3'b011: oAluOp = rv32i_pkg::ALU_SLTU;
+      3'b100: oAluOp = rv32i_pkg::ALU_XOR;
+      3'b110: oAluOp = rv32i_pkg::ALU_OR;
+      3'b111: oAluOp = rv32i_pkg::ALU_AND;
+      3'b001: begin
+        oAluOp   = rv32i_pkg::ALU_SLL;
+        oIllegal = (iInstr31To25 != 7'b0000000);
+      end
+      3'b101: begin
+        unique case (iInstr31To25)
+          7'b0000000: oAluOp = rv32i_pkg::ALU_SRL;
+          7'b0100000: oAluOp = rv32i_pkg::ALU_SRA;
+          default:    oIllegal = 1'b1;
+        endcase
+      end
+      default: oIllegal = 1'b1;
+    endcase
+  end
+
+endmodule
+/*
+[MODULE_INFO_START]
+Name: JumpDecoder
+Role: RV32I jump decoder
+Summary:
+  - Distinguishes JAL from JALR inside the shared jump opcode class
+  - Applies JALR-specific funct3 legality rules while emitting jump control selects
+[MODULE_INFO_END]
+*/
+
+`timescale 1ns / 1ps
+
+module JumpDecoder (
+  input  logic [6:0]                iOpcode,
+  input  logic [2:0]                iFunct3,
+  output rv32i_pkg::alu_a_sel_e     oAluASel,
+  output rv32i_pkg::imm_sel_e       oImmSel,
+  output rv32i_pkg::pc_sel_e        oPcSel,
+  output logic                      oIllegal
+);
+
+  always_comb begin
+    oAluASel = rv32i_pkg::ALUA_RS1;
+    oImmSel  = rv32i_pkg::IMM_NONE;
+    oPcSel   = rv32i_pkg::PC_PLUS4;
+    oIllegal = 1'b0;
+
+    unique case (iOpcode)
+      rv32i_pkg::LP_OPCODE_JAL: begin
+        oAluASel = rv32i_pkg::ALUA_PC;
+        oImmSel  = rv32i_pkg::IMM_J;
+        oPcSel   = rv32i_pkg::PC_JAL;
+      end
+      rv32i_pkg::LP_OPCODE_JALR: begin
+        oAluASel = rv32i_pkg::ALUA_RS1;
+        oImmSel  = rv32i_pkg::IMM_I;
+        oPcSel   = rv32i_pkg::PC_JALR;
+        oIllegal = (iFunct3 != 3'b000);
+      end
+      default: oIllegal = 1'b1;
+    endcase
+  end
+
+endmodule
+/*
+[MODULE_INFO_START]
+Name: LoadDecoder
+Role: RV32I load attribute decoder
+Summary:
+  - Maps load funct3 encodings to access size and sign behavior
+  - Keeps load-specific legality checks local to the load ISA space
+[MODULE_INFO_END]
+*/
+
+`timescale 1ns / 1ps
+
+module LoadDecoder (
+  input  logic [2:0]           iFunct3,
+  output rv32i_pkg::mem_size_e oMemSize,
+  output logic                 oLoadUnsigned,
+  output logic                 oIllegal
+);
+
+  always_comb begin
+    oMemSize      = rv32i_pkg::MEM_WORD;
+    oLoadUnsigned = 1'b0;
+    oIllegal      = 1'b0;
+
+    unique case (iFunct3)
+      3'b000: oMemSize = rv32i_pkg::MEM_BYTE;
+      3'b001: oMemSize = rv32i_pkg::MEM_HALF;
+      3'b010: oMemSize = rv32i_pkg::MEM_WORD;
+      3'b100: begin
+        oMemSize      = rv32i_pkg::MEM_BYTE;
+        oLoadUnsigned = 1'b1;
+      end
+      3'b101: begin
+        oMemSize      = rv32i_pkg::MEM_HALF;
+        oLoadUnsigned = 1'b1;
+      end
+      default: oIllegal = 1'b1;
+    endcase
+  end
+
+endmodule
+/*
+[MODULE_INFO_START]
+Name: MainDecoder
+Role: Opcode classifier
+Summary:
+  - Maps the raw opcode to a coarse ISA instruction class
+  - Flags unsupported opcodes before any type-specific decode is attempted
+[MODULE_INFO_END]
+*/
+
+`timescale 1ns / 1ps
+
+module MainDecoder (
+  input  logic                    [6:0] iOpcode,
+  output rv32i_pkg::opcode_class_e      oOpcodeClass,
+  output logic                          oIllegalOpcode
+);
+
+  always_comb begin
+    oOpcodeClass      = rv32i_pkg::OPCODE_CLASS_ILLEGAL;
+    oIllegalOpcode    = 1'b0;
+
+    unique case (iOpcode)
+      rv32i_pkg::LP_OPCODE_RTYPE:  oOpcodeClass = rv32i_pkg::OPCODE_CLASS_RTYPE;
+      rv32i_pkg::LP_OPCODE_OPIMM:  oOpcodeClass = rv32i_pkg::OPCODE_CLASS_OPIMM;
+      rv32i_pkg::LP_OPCODE_LOAD:   oOpcodeClass = rv32i_pkg::OPCODE_CLASS_LOAD;
+      rv32i_pkg::LP_OPCODE_STORE:  oOpcodeClass = rv32i_pkg::OPCODE_CLASS_STORE;
+      rv32i_pkg::LP_OPCODE_BRANCH: oOpcodeClass = rv32i_pkg::OPCODE_CLASS_BRANCH;
+      rv32i_pkg::LP_OPCODE_LUI,
+      rv32i_pkg::LP_OPCODE_AUIPC:  oOpcodeClass = rv32i_pkg::OPCODE_CLASS_UPPER_IMM;
+      rv32i_pkg::LP_OPCODE_JAL,
+      rv32i_pkg::LP_OPCODE_JALR:   oOpcodeClass = rv32i_pkg::OPCODE_CLASS_JUMP;
+      rv32i_pkg::LP_OPCODE_MISCMEM,
+      rv32i_pkg::LP_OPCODE_SYSTEM: oOpcodeClass = rv32i_pkg::OPCODE_CLASS_SYSTEM;
+      default: begin
+        oIllegalOpcode = 1'b1;
+      end
+    endcase
+  end
+
+endmodule
+/*
+[MODULE_INFO_START]
+Name: MemReadQualifier
+Role: Architectural data-memory read qualification helper
+Summary:
+  - Masks memory readback when no read is requested or the access is misaligned
+  - Keeps the top wrapper free of local combinational qualification logic
+[MODULE_INFO_END]
+*/
+
+`timescale 1ns / 1ps
+
+module MemReadQualifier (
+  input  logic [31:0] iMemRdData,
+  input  logic        iMemRead,
+  input  logic        iDataMisaligned,
+  output logic [31:0] oMemRdDataQualified
+);
+
+  assign oMemRdDataQualified = (iMemRead && !iDataMisaligned) ? iMemRdData : '0;
+
+endmodule
+/*
+[MODULE_INFO_START]
+Name: NextPcGen
+Role: Next-PC selection and instruction alignment checking
+Summary:
+  - Chooses between PC+4, branch, JAL, and JALR targets
+  - Flags instruction-address misalignment from the selected control-flow target
+[MODULE_INFO_END]
+*/
+
+`timescale 1ns / 1ps
+
+module NextPcGen (
+  input  logic [31:0]        iPc,
+  input  rv32i_pkg::pc_sel_e iPcSel,
+  input  logic               iBranchTaken,
+  input  logic [31:0]        iPcTarget,
+  input  logic [31:0]        iJalrTarget,
+  output logic [31:0]        oNextPc,
+  output logic               oInstrAddrMisaligned
+);
+
+  logic [31:0] pcPlus4;
+  logic        pcUseBranch;
+  logic        pcUseJal;
+  logic        pcUseJalr;
+  logic        pcUsePlus4;
+  logic [31:0] pcPlus4Qualified;
+  logic [31:0] pcBranchQualified;
+  logic [31:0] pcJalQualified;
+  logic [31:0] pcJalrQualified;
+  logic [31:0] pcControlTarget;
+
+  assign pcPlus4 = iPc + 32'd4;
+
+  assign pcUseBranch = (iPcSel == rv32i_pkg::PC_BRANCH) && iBranchTaken;
+  assign pcUseJal    = (iPcSel == rv32i_pkg::PC_JAL);
+  assign pcUseJalr   = (iPcSel == rv32i_pkg::PC_JALR);
+  assign pcUsePlus4  = !pcUseBranch && !pcUseJal && !pcUseJalr;
+
+  assign pcPlus4Qualified = pcUsePlus4  ? pcPlus4     : '0;
+  assign pcBranchQualified = pcUseBranch ? iPcTarget   : '0;
+  assign pcJalQualified    = pcUseJal    ? iPcTarget   : '0;
+  assign pcJalrQualified   = pcUseJalr   ? iJalrTarget : '0;
+  assign pcControlTarget   = pcBranchQualified | pcJalQualified | pcJalrQualified;
+
+  assign oNextPc              = pcPlus4Qualified | pcControlTarget;
+  assign oInstrAddrMisaligned = !pcUsePlus4 && (pcControlTarget[1:0] != 2'b00);
+
+endmodule
+/*
+[MODULE_INFO_START]
+Name: Pc
+Role: Program counter register
+Summary:
+  - Stores the current instruction address
+  - Updates on clock edge when write enable is asserted
+[MODULE_INFO_END]
+*/
+
+`timescale 1ns / 1ps
+
+module Pc (
+  input  logic        iClk,
+  input  logic        iRstn,
+  input  logic        iPcWe,
+  input  logic [31:0] iNextPc,
+  output logic [31:0] oPc
+);
+
+  always_ff @(posedge iClk or negedge iRstn) begin
+    if (!iRstn) begin
+      oPc <= '0;
+    end else if (iPcWe) begin
+      oPc <= iNextPc;
+    end
+  end
+
+endmodule
+/*
+[MODULE_INFO_START]
+Name: PcTargetGen
+Role: Branch and jump target address generator
+Summary:
+  - Builds PC-relative branch or JAL targets from PC plus immediate
+  - Builds the aligned JALR target and exposes PC+4 for write-back use
+[MODULE_INFO_END]
+*/
+
+`timescale 1ns / 1ps
+
+module PcTargetGen (
+  input  logic [31:0] iPc,
+  input  logic [31:0] iRs1Data,
+  input  logic [31:0] iImm,
+  output logic [31:0] oPcTarget,
+  output logic [31:0] oJalrTarget,
+  output logic [31:0] oPcPlus4
+);
+
+  assign oPcTarget   = iPc + iImm;
+  assign oJalrTarget = (iRs1Data + iImm) & 32'hFFFF_FFFE;
+  assign oPcPlus4    = iPc + 32'd4;
+
+endmodule
+/*
+[MODULE_INFO_START]
+Name: Regfile
+Role: 32x32 register file
+Summary:
+  - Provides two combinational read ports and one synchronous write port
+  - Enforces x0 as a hard-wired zero register
+[MODULE_INFO_END]
+*/
+
+`timescale 1ns / 1ps
+
+module Regfile (
+  input  logic        iClk,
+  input  logic        iRstn,
+  input  logic [4:0]  iRs1Addr,
+  input  logic [4:0]  iRs2Addr,
+  input  logic [4:0]  iRdAddr,
+  input  logic [31:0] iRdWrData,
+  input  logic        iRdWrEn,
+  output logic [31:0] oRs1RdData,
+  output logic [31:0] oRs2RdData,
+  output logic        oTimingProbe
+);
+
+  logic [31:0] memReg [0:31];
+  integer      idx;
+
+  always_comb begin
+    oRs1RdData = '0;
+    oRs2RdData = '0;
+
+    if (iRs1Addr != '0) begin
+      oRs1RdData = memReg[iRs1Addr];
+    end
+
+    if (iRs2Addr != '0) begin
+      oRs2RdData = memReg[iRs2Addr];
+    end
+  end
+
+  always_ff @(posedge iClk or negedge iRstn) begin
+    if (!iRstn) begin
+      for (idx = 0; idx < 32; idx = idx + 1) begin
+        memReg[idx] <= '0;
+      end
+    end else begin
+      if (iRdWrEn && (iRdAddr != '0)) begin
+        memReg[iRdAddr] <= iRdWrData;
+      end
+
+      memReg[0] <= '0;
+    end
+  end
+
+  assign oTimingProbe = memReg[10][10];
+
+endmodule
+/*
+[MODULE_INFO_START]
+Name: RtypeDecoder
+Role: RV32I R-type ALU decoder
+Summary:
+  - Decodes R-type funct fields into ALU operations
+  - Keeps register-register arithmetic decode aligned with ISA field naming
+[MODULE_INFO_END]
+*/
+
+`timescale 1ns / 1ps
+
+module RtypeDecoder (
+  input  logic [2:0]         iFunct3,
+  input  logic [6:0]         iFunct7,
+  output rv32i_pkg::alu_op_e oAluOp,
+  output logic               oIllegal
+);
+
+  always_comb begin
+    oAluOp   = rv32i_pkg::ALU_ADD;
+    oIllegal = 1'b0;
+
+    unique case ({iFunct7, iFunct3})
+      10'b0000000_000: oAluOp = rv32i_pkg::ALU_ADD;
+      10'b0100000_000: oAluOp = rv32i_pkg::ALU_SUB;
+      10'b0000000_001: oAluOp = rv32i_pkg::ALU_SLL;
+      10'b0000000_010: oAluOp = rv32i_pkg::ALU_SLT;
+      10'b0000000_011: oAluOp = rv32i_pkg::ALU_SLTU;
+      10'b0000000_100: oAluOp = rv32i_pkg::ALU_XOR;
+      10'b0000000_101: oAluOp = rv32i_pkg::ALU_SRL;
+      10'b0100000_101: oAluOp = rv32i_pkg::ALU_SRA;
+      10'b0000000_110: oAluOp = rv32i_pkg::ALU_OR;
+      10'b0000000_111: oAluOp = rv32i_pkg::ALU_AND;
+      default:         oIllegal = 1'b1;
+    endcase
+  end
+
+endmodule
+/*
+[MODULE_INFO_START]
+Name: rv32i_pkg
+Role: Shared package for RV32I single-cycle CPU types and constants
+Summary:
+  - Declares ALU and write-back enums
+  - Defines opcode constants used by decode logic
+[MODULE_INFO_END]
+*/
+
+`timescale 1ns / 1ps
+
+package rv32i_pkg;
+  typedef enum logic [3:0] {
+    ALU_ADD,
+    ALU_SUB,
+    ALU_SLL,
+    ALU_SLT,
+    ALU_SLTU,
+    ALU_XOR,
+    ALU_SRL,
+    ALU_SRA,
+    ALU_OR,
+    ALU_AND
+  } alu_op_e;
+
+  typedef enum logic [1:0] {
+    WB_ALU,
+    WB_MEM,
+    WB_PC4
+  } wb_sel_e;
+
+  typedef enum logic [2:0] {
+    IMM_NONE,
+    IMM_I,
+    IMM_S,
+    IMM_B,
+    IMM_U,
+    IMM_J
+  } imm_sel_e;
+
+  typedef enum logic [1:0] {
+    ALUA_RS1,
+    ALUA_PC,
+    ALUA_ZERO
+  } alu_a_sel_e;
+
+  typedef enum logic {
+    ALUB_RS2,
+    ALUB_IMM
+  } alu_b_sel_e;
+
+  typedef enum logic [1:0] {
+    PC_PLUS4,
+    PC_BRANCH,
+    PC_JAL,
+    PC_JALR
+  } pc_sel_e;
+
+  typedef enum logic [2:0] {
+    BR_NONE,
+    BR_EQ,
+    BR_NE,
+    BR_LT,
+    BR_GE,
+    BR_LTU,
+    BR_GEU
+  } branch_e;
+
+  typedef enum logic [1:0] {
+    MEM_BYTE,
+    MEM_HALF,
+    MEM_WORD
+  } mem_size_e;
+
+  typedef enum logic [1:0] {
+    SYS_NONE,
+    SYS_FENCE,
+    SYS_ECALL,
+    SYS_EBREAK
+  } sys_op_e;
+
+  typedef enum logic [3:0] {
+    OPCODE_CLASS_RTYPE,
+    OPCODE_CLASS_OPIMM,
+    OPCODE_CLASS_LOAD,
+    OPCODE_CLASS_STORE,
+    OPCODE_CLASS_BRANCH,
+    OPCODE_CLASS_UPPER_IMM,
+    OPCODE_CLASS_JUMP,
+    OPCODE_CLASS_SYSTEM,
+    OPCODE_CLASS_ILLEGAL
+  } opcode_class_e;
+
+  localparam logic [6:0] LP_OPCODE_LOAD     = 7'b0000011;
+  localparam logic [6:0] LP_OPCODE_MISCMEM  = 7'b0001111;
+  localparam logic [6:0] LP_OPCODE_OPIMM    = 7'b0010011;
+  localparam logic [6:0] LP_OPCODE_AUIPC    = 7'b0010111;
+  localparam logic [6:0] LP_OPCODE_STORE    = 7'b0100011;
+  localparam logic [6:0] LP_OPCODE_RTYPE    = 7'b0110011;
+  localparam logic [6:0] LP_OPCODE_LUI      = 7'b0110111;
+  localparam logic [6:0] LP_OPCODE_BRANCH   = 7'b1100011;
+  localparam logic [6:0] LP_OPCODE_JALR     = 7'b1100111;
+  localparam logic [6:0] LP_OPCODE_JAL      = 7'b1101111;
+  localparam logic [6:0] LP_OPCODE_SYSTEM   = 7'b1110011;
+
+  localparam logic [11:0] LP_SYSTEM_ECALL   = 12'h000;
+  localparam logic [11:0] LP_SYSTEM_EBREAK  = 12'h001;
+endpackage
+/*
+[MODULE_INFO_START]
+Name: StoreDecoder
+Role: RV32I store attribute decoder
+Summary:
+  - Maps store funct3 encodings to access size
+  - Keeps store-specific legality checks local to the store ISA space
+[MODULE_INFO_END]
+*/
+
+`timescale 1ns / 1ps
+
+module StoreDecoder (
+  input  logic [2:0]           iFunct3,
+  output rv32i_pkg::mem_size_e oMemSize,
+  output logic                 oIllegal
+);
+
+  always_comb begin
+    oMemSize = rv32i_pkg::MEM_WORD;
+    oIllegal = 1'b0;
+
+    unique case (iFunct3)
+      3'b000: oMemSize = rv32i_pkg::MEM_BYTE;
+      3'b001: oMemSize = rv32i_pkg::MEM_HALF;
+      3'b010: oMemSize = rv32i_pkg::MEM_WORD;
+      default: oIllegal = 1'b1;
+    endcase
+  end
+
+endmodule
+/*
+[MODULE_INFO_START]
+Name: SystemDecoder
+Role: Misc-memory and system policy decoder
+Summary:
+  - Handles FENCE-class legal NOP behavior
+  - Decodes ECALL and EBREAK into trap requests
+[MODULE_INFO_END]
+*/
+
+`timescale 1ns / 1ps
+
+module SystemDecoder (
+  input  logic [6:0]         iOpcode,
+  input  logic [2:0]         iFunct3,
+  input  logic [11:0]        iImm12,
+  output rv32i_pkg::sys_op_e oSysOp,
+  output logic               oTrapReq,
+  output logic               oIllegal
+);
+
+  always_comb begin
+    oSysOp   = rv32i_pkg::SYS_NONE;
+    oTrapReq = 1'b0;
+    oIllegal = 1'b0;
+
+    unique case (iOpcode)
+      rv32i_pkg::LP_OPCODE_MISCMEM: begin
+        oIllegal = (iFunct3 != 3'b000);
+        if (!oIllegal) begin
+          oSysOp = rv32i_pkg::SYS_FENCE;
+        end
+      end
+      rv32i_pkg::LP_OPCODE_SYSTEM: begin
+        oIllegal = 1'b1;
+        if (iFunct3 == 3'b000) begin
+          unique case (iImm12)
+            rv32i_pkg::LP_SYSTEM_ECALL: begin
+              oSysOp   = rv32i_pkg::SYS_ECALL;
+              oTrapReq = 1'b1;
+              oIllegal = 1'b0;
+            end
+            rv32i_pkg::LP_SYSTEM_EBREAK: begin
+              oSysOp   = rv32i_pkg::SYS_EBREAK;
+              oTrapReq = 1'b1;
+              oIllegal = 1'b0;
+            end
+            default: oIllegal = 1'b1;
+          endcase
+        end
+      end
+      default: oIllegal = 1'b1;
+    endcase
+  end
+
+endmodule
+/*
+[MODULE_INFO_START]
+Name: TOP
+Role: Top-level wrapper for the RV32I single-cycle CPU
+Summary:
+  - Wires together PC, instruction ROM, control, datapath, and next-PC blocks
+  - Exposes a single timing-retention output so post-synthesis Fmax remains measurable
+[MODULE_INFO_END]
+*/
+
+`timescale 1ns / 1ps
+
+module TOP (
+  input  logic        iClk,
+  input  logic        iRstn,
+  output logic        oTimingProbe
+);
+
+  logic [31:0] pc;
+  logic [31:0] instr;
+  logic [31:0] nextPc;
+  logic [31:0] pcTarget;
+  logic [31:0] jalrTarget;
+  logic        regWriteReq;
+  logic        regWrite;
+  logic        memReadReq;
+  logic        memRead;
+  logic        memWriteReq;
+  logic        memWrite;
+  logic        pcWe;
+  logic        loadUnsigned;
+  logic        illegal;
+  logic        trapReq;
+  logic        branchTaken;
+  logic        dataMisaligned;
+  logic        instrAddrMisaligned;
+  logic        preTrap;
+  logic        coreTrap;
+  rv32i_pkg::mem_size_e memSize;
+  rv32i_pkg::alu_a_sel_e aluASel;
+  rv32i_pkg::alu_b_sel_e aluBSel;
+  rv32i_pkg::imm_sel_e immSel;
+  rv32i_pkg::branch_e branchOp;
+  rv32i_pkg::pc_sel_e pcSel;
+  rv32i_pkg::wb_sel_e wbSel;
+  rv32i_pkg::alu_op_e aluOp;
+  rv32i_pkg::sys_op_e sysOp;
+
+  Pc uPc (
+    .iClk(iClk),
+    .iRstn(iRstn),
+    .iPcWe(pcWe),
+    .iNextPc(nextPc),
+    .oPc(pc)
+  );
+
+  InstrRom uInstrRom (
+    .iAddr(pc),
+    .oInstr(instr)
+  );
+
+  ControlUnit uControlUnit (
+    .iInstr(instr),
+    .oRegWrite(regWriteReq),
+    .oMemRead(memReadReq),
+    .oMemWrite(memWriteReq),
+    .oLoadUnsigned(loadUnsigned),
+    .oMemSize(memSize),
+    .oAluASel(aluASel),
+    .oAluBSel(aluBSel),
+    .oImmSel(immSel),
+    .oBranchOp(branchOp),
+    .oPcSel(pcSel),
+    .oWbSel(wbSel),
+    .oAluOp(aluOp),
+    .oSysOp(sysOp),
+    .oTrapReq(trapReq),
+    .oIllegal(illegal)
+  );
+
+  CoreTrapGate uCoreTrapGate (
+    .iIllegal(illegal),
+    .iTrapReq(trapReq),
+    .iInstrAddrMisaligned(instrAddrMisaligned),
+    .iDataMisaligned(dataMisaligned),
+    .iRegWriteReq(regWriteReq),
+    .iMemReadReq(memReadReq),
+    .iMemWriteReq(memWriteReq),
+    .oPreTrap(preTrap),
+    .oCoreTrap(coreTrap),
+    .oPcWe(pcWe),
+    .oRegWrite(regWrite),
+    .oMemRead(memRead),
+    .oMemWrite(memWrite)
+  );
+
+  Datapath uDatapath (
+    .iClk(iClk),
+    .iRstn(iRstn),
+    .iPc(pc),
+    .iInstr(instr),
+    .iRegWrite(regWrite),
+    .iLoadUnsigned(loadUnsigned),
+    .iMemRead(memRead),
+    .iMemWrite(memWrite),
+    .iMemSize(memSize),
+    .iAluASel(aluASel),
+    .iAluBSel(aluBSel),
+    .iImmSel(immSel),
+    .iBranchOp(branchOp),
+    .iWbSel(wbSel),
+    .iAluOp(aluOp),
+    .oAluResult(),
+    .oPcTarget(pcTarget),
+    .oJalrTarget(jalrTarget),
+    .oBranchTaken(branchTaken),
+    .oDataMisaligned(dataMisaligned),
+    .oMemAddr(),
+    .oMemRdData(),
+    .oMemRdDataQualified(),
+    .oRs2Data(),
+    .oRdWrData(),
+    .oTimingProbe(oTimingProbe)
+  );
+
+  NextPcGen uNextPcGen (
+    .iPc(pc),
+    .iPcSel(pcSel),
+    .iBranchTaken(branchTaken),
+    .iPcTarget(pcTarget),
+    .iJalrTarget(jalrTarget),
+    .oNextPc(nextPc),
+    .oInstrAddrMisaligned(instrAddrMisaligned)
+  );
+
+endmodule
+/*
+[MODULE_INFO_START]
+Name: UtypeDecoder
+Role: RV32I U-type decoder
+Summary:
+  - Distinguishes LUI from AUIPC inside the shared U-type opcode class
+  - Emits only the datapath select that differs between the two instructions
+[MODULE_INFO_END]
+*/
+
+`timescale 1ns / 1ps
+
+module UtypeDecoder (
+  input  logic [6:0]                  iOpcode,
+  output rv32i_pkg::alu_a_sel_e       oAluASel,
+  output logic                        oIllegal
+);
+
+  always_comb begin
+    oAluASel = rv32i_pkg::ALUA_RS1;
+    oIllegal = 1'b0;
+
+    unique case (iOpcode)
+      rv32i_pkg::LP_OPCODE_LUI:   oAluASel = rv32i_pkg::ALUA_ZERO;
+      rv32i_pkg::LP_OPCODE_AUIPC: oAluASel = rv32i_pkg::ALUA_PC;
+      default:                    oIllegal = 1'b1;
+    endcase
+  end
+
+endmodule
+/*
+[MODULE_INFO_START]
+Name: WriteBackMux
+Role: Register-file write-back data selector
+Summary:
+  - Merges one-hot-qualified ALU, memory, or PC+4 write-back sources
+  - Keeps source qualification separate from the final destination bus
+[MODULE_INFO_END]
+*/
+
+`timescale 1ns / 1ps
+
+module WriteBackMux (
+  input  logic [31:0]        iAluResult,
+  input  logic [31:0]        iMemRdData,
+  input  logic [31:0]        iPcPlus4,
+  output logic [31:0]        oRdWrData
+);
+
+  assign oRdWrData = iAluResult | iMemRdData | iPcPlus4;
+
+endmodule
+
+// ============================================================================
+// RV32I timing / golden-check ROM image
+//   format: HEX // PC / instruction / key golden result
+// ============================================================================
+
+// Basic ALU / immediate operations
+00f00093 // PC=000 addi x1,x0,15        -> RF[1]=0x0000000F
+00300113 // PC=004 addi x2,x0,3         -> RF[2]=0x00000003
+ff000193 // PC=008 addi x3,x0,-16       -> RF[3]=0xFFFFFFF0
+08000b93 // PC=012 addi x23,x0,128      -> RF[23]=0x00000080
+09000c13 // PC=016 addi x24,x0,144      -> RF[24]=0x00000090
+00208233 // PC=020 add x4,x1,x2         -> RF[4]=0x00000012
+402082b3 // PC=024 sub x5,x1,x2         -> RF[5]=0x0000000C
+00209333 // PC=028 sll x6,x1,x2         -> RF[6]=0x00000078
+0011a3b3 // PC=032 slt x7,x3,x1         -> RF[7]=0x00000001
+0011b433 // PC=036 sltu x8,x3,x1        -> RF[8]=0x00000000
+0020c4b3 // PC=040 xor x9,x1,x2         -> RF[9]=0x0000000C
+0020d533 // PC=044 srl x10,x1,x2        -> RF[10]=0x00000001
+4021d5b3 // PC=048 sra x11,x3,x2        -> RF[11]=0xFFFFFFFE
+0020e633 // PC=052 or x12,x1,x2         -> RF[12]=0x0000000F
+0020f6b3 // PC=056 and x13,x1,x2        -> RF[13]=0x00000003
+00508713 // PC=060 addi x14,x1,5        -> RF[14]=0x00000014
+0001a793 // PC=064 slti x15,x3,0        -> RF[15]=0x00000001
+0011b813 // PC=068 sltiu x16,x3,1       -> RF[16]=0x00000000
+0030c893 // PC=072 xori x17,x1,3        -> RF[17]=0x0000000C
+0020e913 // PC=076 ori x18,x1,2         -> RF[18]=0x0000000F
+0070f993 // PC=080 andi x19,x1,7        -> RF[19]=0x00000007
+00411a13 // PC=084 slli x20,x2,4        -> RF[20]=0x00000030
+0010da93 // PC=088 srli x21,x1,1        -> RF[21]=0x00000007
+4021db13 // PC=092 srai x22,x3,2        -> RF[22]=0xFFFFFFFC
+12345cb7 // PC=096 lui x25,74565        -> RF[25]=0x12345000
+00001d17 // PC=100 auipc x26,1          -> RF[26]=0x00001064
+
+// Load / store operations
+00eba023 // PC=104 sw x14,x23,0         -> DMEM[0x80]=0x00000014
+000bad83 // PC=108 lw x27,x23,0         -> RF[27]=0x00000014
+002d8e33 // PC=112 add x28,x27,x2       -> RF[28]=0x00000017
+08000213 // PC=116 addi x4,x0,128       -> RF[4]=0x00000080
+004b8223 // PC=120 sb x4,x23,4          -> DMEM8[0x84]=0x80
+07f00293 // PC=124 addi x5,x0,127       -> RF[5]=0x0000007F
+005b82a3 // PC=128 sb x5,x23,5          -> DMEM8[0x85]=0x7F
+ff200313 // PC=132 addi x6,x0,-14       -> RF[6]=0xFFFFFFF2
+00831313 // PC=136 slli x6,x6,8         -> RF[6]=0xFFFFF200
+03430313 // PC=140 addi x6,x6,52        -> RF[6]=0xFFFFF234
+006b9323 // PC=144 sh x6,x23,6          -> DMEM16[0x86]=0xF234, DMEM32[0x84]=0xF2347F80
+004b8e83 // PC=148 lb x29,x23,4         -> RF[29]=0xFFFFFF80
+004bcf03 // PC=152 lbu x30,x23,4        -> RF[30]=0x00000080
+006b9f83 // PC=156 lh x31,x23,6         -> RF[31]=0xFFFFF234
+006bd203 // PC=160 lhu x4,x23,6         -> RF[4]=0x0000F234
+01eec2b3 // PC=164 xor x5,x29,x30       -> RF[5]=0xFFFFFF00
+004f8333 // PC=168 add x6,x31,x4        -> RF[6]=0x0000E468
+
+// Branch operations
+00000393 // PC=172 addi x7,x0,0         -> RF[7]=0x00000000
+00000413 // PC=176 addi x8,x0,0         -> RF[8]=0x00000000
+00208463 // PC=180 beq x1,x2,target     -> not taken, next PC=184
+00138393 // PC=184 addi x7,x7,1         -> RF[7]=0x00000001
+00108463 // PC=188 beq x1,x1,target     -> taken, skip PC=192
+06340413 // PC=192 addi x8,x8,99        -> skipped, RF[8] stays 0x00000000
+00140413 // PC=196 addi x8,x8,1         -> RF[8]=0x00000001
+00109463 // PC=200 bne x1,x1,target     -> not taken, next PC=204
+00138393 // PC=204 addi x7,x7,1         -> RF[7]=0x00000002
+00209463 // PC=208 bne x1,x2,target     -> taken, skip PC=212
+06340413 // PC=212 addi x8,x8,99        -> skipped, RF[8] stays 0x00000001
+00140413 // PC=216 addi x8,x8,1         -> RF[8]=0x00000002
+0020c463 // PC=220 blt x1,x2,target     -> not taken, next PC=224
+00138393 // PC=224 addi x7,x7,1         -> RF[7]=0x00000003
+0011c463 // PC=228 blt x3,x1,target     -> taken, skip PC=232
+06340413 // PC=232 addi x8,x8,99        -> skipped, RF[8] stays 0x00000002
+00140413 // PC=236 addi x8,x8,1         -> RF[8]=0x00000003
+00115463 // PC=240 bge x2,x1,target     -> not taken, next PC=244
+00138393 // PC=244 addi x7,x7,1         -> RF[7]=0x00000004
+0020d463 // PC=248 bge x1,x2,target     -> taken, skip PC=252
+06340413 // PC=252 addi x8,x8,99        -> skipped, RF[8] stays 0x00000003
+00140413 // PC=256 addi x8,x8,1         -> RF[8]=0x00000004
+0020e463 // PC=260 bltu x1,x2,target    -> not taken, next PC=264
+00138393 // PC=264 addi x7,x7,1         -> RF[7]=0x00000005
+00116463 // PC=268 bltu x2,x1,target    -> taken, skip PC=272
+06340413 // PC=272 addi x8,x8,99        -> skipped, RF[8] stays 0x00000004
+00140413 // PC=276 addi x8,x8,1         -> RF[8]=0x00000005
+00117463 // PC=280 bgeu x2,x1,target    -> not taken, next PC=284
+00138393 // PC=284 addi x7,x7,1         -> RF[7]=0x00000006
+0020f463 // PC=288 bgeu x1,x2,target    -> taken, skip PC=292
+06340413 // PC=292 addi x8,x8,99        -> skipped, RF[8] stays 0x00000005
+00140413 // PC=296 addi x8,x8,1         -> RF[8]=0x00000006
+
+// Loop / jump operations
+00400493 // PC=300 addi x9,x0,4         -> RF[9]=0x00000004
+00000513 // PC=304 addi x10,x0,0        -> RF[10]=0x00000000
+fff48493 // PC=308 addi x9,x9,-1        -> RF[9]=3,2,1,0 across loop
+00950533 // PC=312 add x10,x10,x9       -> RF[10]=3,5,6,6 across loop
+fe049ce3 // PC=316 bne x9,x0,loop_body  -> taken x3, final not taken
+008005ef // PC=320 jal x11,jal_target   -> RF[11]=0x00000144, jump PC=328
+06f00613 // PC=324 addi x12,x0,111      -> skipped, RF[12] stays 0x0000000F
+00000617 // PC=328 auipc x12,0          -> RF[12]=0x00000148
+01060613 // PC=332 addi x12,x12,16      -> RF[12]=0x00000158
+000606e7 // PC=336 jalr x13,x12,0       -> RF[13]=0x00000154, jump PC=344
+0de00713 // PC=340 addi x14,x0,222      -> skipped, RF[14] stays 0x00000014
+03700793 // PC=344 addi x15,x0,55       -> RF[15]=0x00000037
+0000000f // PC=348 fence                -> no architectural register change
+001c8833 // PC=352 add x16,x25,x1       -> RF[16]=0x1234500F
+002d08b3 // PC=356 add x17,x26,x2       -> RF[17]=0x00001067
+0000006f // PC=360 jal x0,done          -> self loop at PC=360

@@ -1,0 +1,5 @@
+{"name":"mixed_max_first","checked_beats":4,"frame_samples":1,"reset_samples":0,"coverage_pct":7.8}
+{"name":"mixed_max_middle","checked_beats":4,"frame_samples":1,"reset_samples":0,"coverage_pct":7.8}
+{"name":"mixed_max_last","checked_beats":4,"frame_samples":1,"reset_samples":0,"coverage_pct":7.8}
+{"name":"near_equal_middle","checked_beats":3,"frame_samples":1,"reset_samples":0,"coverage_pct":9.6}
+{"name":"near_equal_tie","checked_beats":3,"frame_samples":1,"reset_samples":0,"coverage_pct":9.6}

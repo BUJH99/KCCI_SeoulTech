@@ -1,0 +1,385 @@
+{
+  "clock_port": "iClk",
+  "reset_port": "iRstn",
+  "clock_period_ns": 10.0,
+  "analysis_mode": "single_cycle",
+  "default_output_dir": ".analysis/single_cycle_perf",
+  "default_report_path": "SINGLE_CYCLE_OPTIMIZATION_REPORT.md",
+  "probe_families": [
+    {
+      "key": "timing_metric",
+      "label": "Timing Metric",
+      "description": "Top-level retained writeback-derived timing sink",
+      "artifact_key": "timing_metric",
+      "endpoint_patterns": [
+        "*timingRetainMetric_reg*"
+      ],
+      "artifact_aliases": [
+        "timing_metric"
+      ],
+      "end_match_tokens": [
+        "timingRetainMetric"
+      ]
+    }
+  ],
+  "legacy_probe_families": [
+    {
+      "key": "pc_feedback",
+      "label": "PC Feedback",
+      "description": "Retained PC enable and next-PC sink family",
+      "artifact_key": "pc_feedback",
+      "artifact_aliases": [
+        "pc_feedback"
+      ],
+      "end_match_tokens": [
+        "timingRetainPcFeedback"
+      ]
+    },
+    {
+      "key": "load_writeback",
+      "label": "Load Writeback",
+      "description": "Retained load writeback sink family",
+      "artifact_key": "load_writeback",
+      "artifact_aliases": [
+        "load_writeback"
+      ],
+      "end_match_tokens": [
+        "timingRetainLoadWb"
+      ]
+    },
+    {
+      "key": "alu_writeback",
+      "label": "ALU Writeback",
+      "description": "Retained ALU writeback sink family",
+      "artifact_key": "alu_writeback",
+      "artifact_aliases": [
+        "alu_writeback"
+      ],
+      "end_match_tokens": [
+        "timingRetainAluWb"
+      ]
+    },
+    {
+      "key": "branch_target",
+      "label": "Branch Target",
+      "description": "Retained conditional-branch target sink family",
+      "artifact_key": "branch_target",
+      "artifact_aliases": [
+        "branch_target",
+        "branch_jalr"
+      ],
+      "end_match_tokens": [
+        "timingRetainBranchTarget"
+      ]
+    },
+    {
+      "key": "jump_target",
+      "label": "Jump Target",
+      "description": "Retained JAL target sink family",
+      "artifact_key": "jump_target",
+      "artifact_aliases": [
+        "jump_target"
+      ],
+      "end_match_tokens": [
+        "timingRetainJumpTarget"
+      ]
+    },
+    {
+      "key": "jalr_target",
+      "label": "JALR Target",
+      "description": "Retained JALR target sink family",
+      "artifact_key": "jalr_target",
+      "artifact_aliases": [
+        "jalr_target",
+        "branch_jalr"
+      ],
+      "end_match_tokens": [
+        "timingRetainJalrTarget"
+      ]
+    }
+  ],
+  "module_alias_prefixes": {
+    "Pc": [
+      "uPc/"
+    ],
+    "InstrRom": [
+      "uInstrRom/"
+    ],
+    "ControlUnit": [
+      "uControlUnit/"
+    ],
+    "CoreTrapGate": [
+      "uCoreTrapGate/"
+    ],
+    "NextPcGen": [
+      "uNextPcGen/"
+    ],
+    "DataRam": [
+      "uDatapath/uDataRam/",
+      "uDataRam/"
+    ],
+    "Regfile": [
+      "uDatapath/uRegfile/"
+    ],
+    "ImmGen": [
+      "uDatapath/uAluImmGen/",
+      "uDatapath/uAddrImmGen/",
+      "uDatapath/uImmGen/"
+    ],
+    "AluOperandSel": [
+      "uDatapath/uAluOperandSel/"
+    ],
+    "Alu": [
+      "uDatapath/uAlu/"
+    ],
+    "PcTargetGen": [
+      "uDatapath/uPcTargetGen/"
+    ],
+    "WriteBackMux": [
+      "uDatapath/uWriteBackMux/"
+    ],
+    "BranchComparator": [
+      "uDatapath/uBranchComparator/"
+    ],
+    "Datapath": [
+      "uDatapath/"
+    ],
+    "TimingProbeSink": [
+      "oTimingProbe",
+      "oTimingProbe_OBUF"
+    ]
+  },
+  "module_metrics_exclude_patterns": [
+    "*TimingProbe*",
+    "*probe*",
+    "*IBUF*",
+    "*OBUF*",
+    "*BUFG*"
+  ],
+  "class_targets": {
+    "RTYPE": [
+      "probeExecReg",
+      "probeAluWbReg",
+      "probeWbReg"
+    ],
+    "OPIMM": [
+      "probeExecReg",
+      "probeAluWbReg",
+      "probeWbReg"
+    ],
+    "LOAD": [
+      "loadCommitSink"
+    ],
+    "STORE": [
+      "probeStoreReg",
+      "probeExecReg"
+    ],
+    "BRANCH": [
+      "probeBranchTargetReg",
+      "probeNextPcReg",
+      "probeDecodeReg",
+      "probeExecReg"
+    ],
+    "UPPER_IMM": [
+      "probeExecReg",
+      "probeAluWbReg",
+      "probeWbReg"
+    ],
+    "JUMP": [
+      "probeJalrTargetReg",
+      "probeJumpTargetReg",
+      "probeNextPcReg",
+      "probeWbReg"
+    ],
+    "SYSTEM": [
+      "probeTrapReg",
+      "probeDecodeReg",
+      "probeNextPcReg"
+    ]
+  },
+  "stage_candidate_map": {
+    "IF": [
+      "probeFetchReg"
+    ],
+    "ID": [
+      "probeDecodeReg"
+    ],
+    "EX": [
+      "probeExecReg",
+      "probeTrapReg"
+    ],
+    "MEM": [
+      "probeMemReg",
+      "probeStoreReg"
+    ],
+    "WB": [
+      "loadCommitSink",
+      "probeLoadWbReg",
+      "probeAluWbReg",
+      "probeWbReg"
+    ],
+    "CF": [
+      "probeNextPcReg",
+      "probeBranchTargetReg",
+      "probeJumpTargetReg",
+      "probeJalrTargetReg"
+    ]
+  },
+  "family_active_classes": {
+    "pc_feedback": [
+      "BRANCH",
+      "JUMP",
+      "SYSTEM"
+    ],
+    "load_writeback": [
+      "LOAD"
+    ],
+    "alu_writeback": [
+      "RTYPE",
+      "OPIMM",
+      "UPPER_IMM"
+    ],
+    "branch_target": [
+      "BRANCH"
+    ],
+    "jump_target": [
+      "JUMP"
+    ],
+    "jalr_target": [
+      "JUMP"
+    ],
+    "timing_metric": [
+      "RTYPE",
+      "OPIMM",
+      "LOAD",
+      "UPPER_IMM",
+      "JUMP"
+    ]
+  },
+  "class_stage_candidate_map": {
+    "RTYPE": {
+      "IF": [
+        "probeFetchReg"
+      ],
+      "ID": [
+        "probeDecodeReg"
+      ],
+      "EX": [
+        "probeExecReg"
+      ],
+      "WB": [
+        "probeAluWbReg",
+        "probeWbReg"
+      ]
+    },
+    "OPIMM": {
+      "IF": [
+        "probeFetchReg"
+      ],
+      "ID": [
+        "probeDecodeReg"
+      ],
+      "EX": [
+        "probeExecReg"
+      ],
+      "WB": [
+        "probeAluWbReg",
+        "probeWbReg"
+      ]
+    },
+    "LOAD": {
+      "IF": [
+        "probeFetchReg"
+      ],
+      "ID": [
+        "probeDecodeReg"
+      ],
+      "EX": [
+        "probeExecReg"
+      ],
+      "MEM": [
+        "probeMemReg"
+      ],
+      "WB": [
+        "loadCommitSink"
+      ]
+    },
+    "STORE": {
+      "IF": [
+        "probeFetchReg"
+      ],
+      "ID": [
+        "probeDecodeReg"
+      ],
+      "EX": [
+        "probeExecReg"
+      ],
+      "MEM": [
+        "probeStoreReg"
+      ]
+    },
+    "BRANCH": {
+      "IF": [
+        "probeFetchReg"
+      ],
+      "ID": [
+        "probeDecodeReg"
+      ],
+      "EX": [
+        "probeExecReg"
+      ],
+      "CF": [
+        "probeBranchTargetReg",
+        "probeNextPcReg"
+      ]
+    },
+    "UPPER_IMM": {
+      "IF": [
+        "probeFetchReg"
+      ],
+      "ID": [
+        "probeDecodeReg"
+      ],
+      "EX": [
+        "probeExecReg"
+      ],
+      "WB": [
+        "probeAluWbReg",
+        "probeWbReg"
+      ]
+    },
+    "JUMP": {
+      "IF": [
+        "probeFetchReg"
+      ],
+      "ID": [
+        "probeDecodeReg"
+      ],
+      "EX": [
+        "probeExecReg"
+      ],
+      "WB": [
+        "probeWbReg"
+      ],
+      "CF": [
+        "probeJumpTargetReg",
+        "probeJalrTargetReg",
+        "probeNextPcReg"
+      ]
+    },
+    "SYSTEM": {
+      "IF": [
+        "probeFetchReg"
+      ],
+      "ID": [
+        "probeDecodeReg"
+      ],
+      "EX": [
+        "probeTrapReg"
+      ],
+      "CF": [
+        "probeNextPcReg"
+      ]
+    }
+  }
+}
