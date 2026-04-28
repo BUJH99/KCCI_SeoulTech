@@ -11,7 +11,7 @@ Summary:
 
 `timescale 1ns / 1ps
 
-module TOP #(
+module Top #(
   parameter int unsigned P_CLK_HZ     = 100_000_000,
   parameter int unsigned P_UART_BAUD  = 9_600,
   parameter int unsigned P_GPIO_WIDTH = 8

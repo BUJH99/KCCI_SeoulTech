@@ -1,0 +1,32 @@
+#-----------------------------------------------------------
+# Vivado v2025.2 (64-bit)
+# SW Build 6299465 on Fri Nov 14 19:35:11 GMT 2025
+# IP Build 6300035 on Fri Nov 14 10:48:45 MST 2025
+# SharedData Build 6298862 on Thu Nov 13 04:50:51 MST 2025
+# Start of session at: Wed Apr 22 09:34:44 2026
+# Process ID         : 46500
+# Current directory  : C:/Users/tbdk5/Desktop/MAIN/0_Working/git/Project/AXI_LITE/vivado_project
+# Command line       : vivado.exe -mode gui -source C:\Users\tbdk5\Desktop\MAIN\0_Working\git\FPGA_Auto_Project\templates\contexts\simulation\adapters\tcl\sim_run_vivado.tcl -log C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\AXI_LITE\tb\vivado_sim_TbTop.log -journal C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\AXI_LITE\tb\vivado_sim_TbTop.jou -notrace -tclargs C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\AXI_LITE TbTop C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\AXI_LITE\vivado_project C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\AXI_LITE\output\manifest\manifest_src_files.lst C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\AXI_LITE\output\manifest\manifest_tb_files.lst C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\AXI_LITE\output\manifest\manifest_inc_dirs.lst C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\AXI_LITE\tb\TbTop.sv -testplusarg TESTNAME=all
+# Log file           : C:/Users/tbdk5/Desktop/MAIN/0_Working/git/Project/AXI_LITE/tb/vivado_sim_TbTop.log
+# Journal file       : C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\AXI_LITE\tb\vivado_sim_TbTop.jou
+# Running On         : DESKTOP-UEDTMS0
+# Platform           : Windows Server 2016 or Windows 10
+# Operating System   : 26200
+# Processor Detail   : 13th Gen Intel(R) Core(TM) i5-13600K
+# CPU Frequency      : 3494 MHz
+# CPU Physical cores : 14
+# CPU Logical cores  : 20
+# Host memory        : 34116 MB
+# Swap memory        : 6174 MB
+# Total Virtual      : 40290 MB
+# Available Virtual  : 7634 MB
+#-----------------------------------------------------------
+start_gui
+source {C:\Users\tbdk5\Desktop\MAIN\0_Working\git\FPGA_Auto_Project\templates\contexts\simulation\adapters\tcl\sim_run_vivado.tcl} -notrace
+source TbTop.tcl
+update_compile_order -fileset sources_1
+restart
+run all
+restart
+run all
+close_sim

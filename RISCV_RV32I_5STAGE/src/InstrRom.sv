@@ -13,7 +13,7 @@ Summary:
 module InstrRom #(
   parameter int unsigned P_ADDR_WIDTH = 8,
   parameter int unsigned P_DATA_WIDTH = 32,
-  parameter string       P_INIT_FILE  = "Project/RISCV_32I_5STAGE/src/InstructionFORTIMING.mem"
+  parameter string       P_INIT_FILE  = "C:/Users/tbdk5/Desktop/MAIN/0_Working/git/Project/RISCV_RV32I_5STAGE/src/InstructionFORTIMING.mem"
 )(
   input  logic [31:0]             iAddr,
   output logic [P_DATA_WIDTH-1:0] oInstr
