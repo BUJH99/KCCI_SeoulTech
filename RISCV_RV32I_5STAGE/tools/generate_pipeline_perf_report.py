@@ -40,9 +40,15 @@ from templates.contexts.timing_verification.adapters.python.riscv_timing_analysi
     trace_program_words,
 )
 from templates.contexts.timing_verification.adapters.python.riscv_timing_analysis.integrated_report import (  # noqa: E402
+    highest_status,
     merge_program_detail_section,
+    render_finding_table,
+    render_recommended_actions,
     shift_markdown_headings,
+    status_badge,
     strip_first_markdown_heading,
+    strip_noisy_report_sections,
+    write_html_report,
 )
 from templates.contexts.timing_verification.adapters.python.riscv_timing_analysis.rv32i import (  # noqa: E402
     DEFAULT_CLASS_ORDER,
@@ -207,6 +213,18 @@ def parse_timing_paths_tsv(path: pathlib.Path) -> list[dict[str, Any]]:
     return rows
 
 
+def count_unique_timing_paths(rows: list[dict[str, Any]]) -> int:
+    unique_keys = {
+        (
+            str(row.get("start_pin", "")),
+            str(row.get("end_pin", "")),
+            f"{float(row.get('slack_ns', 0.0)):.6f}",
+        )
+        for row in rows
+    }
+    return len(unique_keys)
+
+
 def extract_route_status(path: pathlib.Path) -> str:
     if not path.exists():
         return "NA"
@@ -242,10 +260,10 @@ def extract_utilization_lut_ff(path: pathlib.Path) -> tuple[str, str]:
     return lut_used, ff_used
 
 
-def fmt_float(value: float | None) -> str:
+def fmt_float(value: float | None, digits: int = 3) -> str:
     if value is None:
         return "NA"
-    return f"{value:.3f}"
+    return f"{value:.{digits}f}"
 
 
 def fmt_int(value: int | None) -> str:
@@ -328,12 +346,27 @@ def unique_strings(values: list[str]) -> list[str]:
     return ordered
 
 
+def safe_mean(values: list[float]) -> float | None:
+    return (sum(values) / len(values)) if values else None
+
+
 def format_family_search_detail(family: dict[str, Any]) -> str:
     search_groups = [
         ("instance", list(family.get("instance_patterns", []))),
         ("ref", list(family.get("ref_name_patterns", []))),
         ("endpoint", list(family.get("endpoint_patterns", []))),
         ("pin", list(family.get("pin_name_patterns", []))),
+    ]
+    rendered = [f"{label}={','.join(patterns)}" for label, patterns in search_groups if patterns]
+    return "; ".join(rendered) if rendered else "no search patterns recorded"
+
+
+def format_pin_search_detail(pin_spec: dict[str, Any]) -> str:
+    search_groups = [
+        ("instance", list(pin_spec.get("instance_patterns", []))),
+        ("ref", list(pin_spec.get("ref_name_patterns", []))),
+        ("endpoint", list(pin_spec.get("endpoint_patterns", []))),
+        ("pin", list(pin_spec.get("pin_name_patterns", []))),
     ]
     rendered = [f"{label}={','.join(patterns)}" for label, patterns in search_groups if patterns]
     return "; ".join(rendered) if rendered else "no search patterns recorded"
@@ -513,6 +546,23 @@ def build_family_configs(profile: dict[str, Any]) -> list[dict[str, Any]]:
     return family_configs
 
 
+def build_stage_boundary_configs(profile: dict[str, Any]) -> list[dict[str, Any]]:
+    boundary_configs: list[dict[str, Any]] = []
+    for boundary in profile.get("stage_boundaries", []):
+        boundary_configs.append(
+            {
+                "key": str(boundary["key"]),
+                "label": str(boundary.get("label", boundary["key"])),
+                "description": str(boundary.get("description", "")),
+                "artifact_key": str(boundary.get("artifact_key", boundary["key"])),
+                "stage": str(boundary.get("stage", "NA")),
+                "from": dict(boundary.get("from", {})),
+                "to": dict(boundary.get("to", {})),
+            }
+        )
+    return boundary_configs
+
+
 def run_vivado_for_project(
     contract: dict[str, object],
     output_dir: pathlib.Path,
@@ -546,6 +596,7 @@ def run_vivado_for_project(
             "reset_port": contract["reset_port"],
             "clk_period_ns": float(contract["clock_period_ns"]),
             "family_configs": build_family_configs(contract["profile"]),
+            "stage_boundary_configs": build_stage_boundary_configs(contract["profile"]),
             "synth_directive": implementation_cfg["synth_directive"],
             "opt_directive": implementation_cfg["opt_directive"],
             "place_directive": implementation_cfg["place_directive"],
@@ -605,6 +656,7 @@ def run_instruction_focus_vivado(
             "reset_port": contract["reset_port"],
             "clk_period_ns": float(contract["clock_period_ns"]),
             "family_configs": build_family_configs(contract["profile"]),
+            "stage_boundary_configs": build_stage_boundary_configs(contract["profile"]),
             "focus_configs": [
                 {
                     "key": str(entry["output_dir_name"]),
@@ -721,6 +773,58 @@ def collect_family_timing_rows(output_dir: pathlib.Path, profile: dict[str, Any]
                 "tsv_path": output_dir / f"{chosen_key}_timing_paths.tsv",
                 "report_path": output_dir / f"{chosen_key}_timing_top20.rpt",
                 "path_count": len(timing_rows),
+                "unique_path_count": count_unique_timing_paths(timing_rows),
+                "worst_path": worst_path,
+                "min_period_ns": min_period_ns,
+                "datapath_delay_ns": datapath_delay_ns,
+                "fmax_mhz": fmax_mhz,
+            }
+        )
+    return rows
+
+
+def collect_stage_boundary_timing_rows(output_dir: pathlib.Path, profile: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for boundary in profile.get("stage_boundaries", []):
+        candidate_keys = unique_strings(
+            [str(boundary.get("artifact_key", boundary["key"]))] + list(boundary.get("artifact_aliases", []))
+        )
+        chosen_key = None
+        timing_rows: list[dict[str, Any]] = []
+        first_existing_key = None
+        for candidate_key in candidate_keys:
+            tsv_path = output_dir / f"{candidate_key}_timing_paths.tsv"
+            if not tsv_path.exists():
+                continue
+            if first_existing_key is None:
+                first_existing_key = candidate_key
+            parsed_rows = parse_timing_paths_tsv(tsv_path)
+            if parsed_rows:
+                chosen_key = candidate_key
+                timing_rows = parsed_rows
+                break
+        if chosen_key is None and first_existing_key is not None:
+            chosen_key = first_existing_key
+            timing_rows = parse_timing_paths_tsv(output_dir / f"{chosen_key}_timing_paths.tsv")
+
+        chosen_key = chosen_key or str(boundary.get("artifact_key", boundary["key"]))
+        worst_path = timing_rows[0] if timing_rows else None
+        min_period_ns = float(worst_path["min_period_ns"]) if worst_path else None
+        datapath_delay_ns = float(worst_path["datapath_delay_ns"]) if worst_path else None
+        fmax_mhz = 1000.0 / min_period_ns if min_period_ns and min_period_ns > 0 else None
+        rows.append(
+            {
+                "key": str(boundary["key"]),
+                "label": str(boundary.get("label", boundary["key"])),
+                "description": str(boundary.get("description", "")),
+                "artifact_key": chosen_key,
+                "stage": str(boundary.get("stage", "NA")),
+                "from": dict(boundary.get("from", {})),
+                "to": dict(boundary.get("to", {})),
+                "tsv_path": output_dir / f"{chosen_key}_timing_paths.tsv",
+                "report_path": output_dir / f"{chosen_key}_timing_top20.rpt",
+                "path_count": len(timing_rows),
+                "unique_path_count": count_unique_timing_paths(timing_rows),
                 "worst_path": worst_path,
                 "min_period_ns": min_period_ns,
                 "datapath_delay_ns": datapath_delay_ns,
@@ -738,12 +842,44 @@ def choose_worst_family(family_rows: dict[str, dict[str, Any]], candidate_keys: 
     return matches[0] if matches else None
 
 
+def build_boundary_by_stage(boundary_rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    stage_rows: dict[str, dict[str, Any]] = {}
+    for row in boundary_rows:
+        stage = str(row.get("stage", "NA"))
+        current = stage_rows.get(stage)
+        if current is None:
+            stage_rows[stage] = row
+            continue
+        if row.get("min_period_ns") is None:
+            continue
+        if current.get("min_period_ns") is None or float(row["min_period_ns"]) > float(current["min_period_ns"]):
+            stage_rows[stage] = row
+    return stage_rows
+
+
+def choose_stage_timing_cell(
+    *,
+    stage: str,
+    candidate_keys: list[str],
+    family_by_key: dict[str, dict[str, Any]],
+    boundary_by_stage: dict[str, dict[str, Any]],
+) -> dict[str, Any] | None:
+    if not candidate_keys:
+        return None
+    boundary_row = boundary_by_stage.get(stage)
+    if boundary_row and boundary_row.get("min_period_ns") is not None:
+        return boundary_row
+    return choose_worst_family(family_by_key, candidate_keys)
+
+
 def build_class_stage_rows(
     profile: dict[str, Any],
     instruction_details: dict[str, Any],
     family_rows: list[dict[str, Any]],
+    boundary_rows: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     family_by_key = {row["key"]: row for row in family_rows}
+    boundary_by_stage = build_boundary_by_stage(boundary_rows or [])
     class_stage_candidate_map = dict(profile.get("class_stage_candidate_map", {}))
     stage_order = list(profile.get("stage_order", []))
     class_counts = dict(instruction_details.get("class_counts", {}))
@@ -756,7 +892,12 @@ def build_class_stage_rows(
         mapping = dict(class_stage_candidate_map.get(class_name, {}))
         stage_cells: dict[str, dict[str, Any] | None] = {}
         for stage in stage_order:
-            stage_cells[stage] = choose_worst_family(family_by_key, list(mapping.get(stage, [])))
+            stage_cells[stage] = choose_stage_timing_cell(
+                stage=stage,
+                candidate_keys=list(mapping.get(stage, [])),
+                family_by_key=family_by_key,
+                boundary_by_stage=boundary_by_stage,
+            )
         rows.append(
             {
                 "class_name": class_name,
@@ -771,8 +912,10 @@ def build_mnemonic_stage_rows(
     profile: dict[str, Any],
     instruction_details: dict[str, Any],
     family_rows: list[dict[str, Any]],
+    boundary_rows: list[dict[str, Any]] | None = None,
 ) -> list[dict[str, Any]]:
     family_by_key = {row["key"]: row for row in family_rows}
+    boundary_by_stage = build_boundary_by_stage(boundary_rows or [])
     class_stage_candidate_map = dict(profile.get("class_stage_candidate_map", {}))
     mnemonic_stage_candidate_map = dict(profile.get("mnemonic_stage_candidate_map", {}))
     stage_order = list(profile.get("stage_order", []))
@@ -790,7 +933,12 @@ def build_mnemonic_stage_rows(
             mapping[stage] = list(candidate_keys)
         stage_cells: dict[str, dict[str, Any] | None] = {}
         for stage in stage_order:
-            stage_cells[stage] = choose_worst_family(family_by_key, list(mapping.get(stage, [])))
+            stage_cells[stage] = choose_stage_timing_cell(
+                stage=stage,
+                candidate_keys=list(mapping.get(stage, [])),
+                family_by_key=family_by_key,
+                boundary_by_stage=boundary_by_stage,
+            )
         rows.append(
             {
                 "mnemonic": mnemonic,
@@ -826,12 +974,36 @@ def build_stage_health_rows(
     return rows
 
 
+def build_stage_boundary_health_rows(boundary_rows: list[dict[str, Any]]) -> list[dict[str, str]]:
+    rows: list[dict[str, str]] = []
+    for row in boundary_rows:
+        status = "PASS" if row.get("path_count", 0) > 0 else "WARN"
+        if row.get("worst_path"):
+            detail = f"{row['worst_path']['start_pin']} -> {row['worst_path']['end_pin']}"
+        else:
+            detail = (
+                "No matched register-to-register post-route timing path. "
+                f"from {format_pin_search_detail(dict(row.get('from', {})))}; "
+                f"to {format_pin_search_detail(dict(row.get('to', {})))}"
+            )
+        rows.append(
+            {
+                "boundary": str(row.get("label", row.get("key", "NA"))),
+                "status": status,
+                "detail": detail,
+            }
+        )
+    return rows
+
+
 def build_focus_stage_row(
     profile: dict[str, Any],
     entry: dict[str, Any],
     family_rows: list[dict[str, Any]],
+    boundary_rows: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     family_by_key = {row["key"]: row for row in family_rows}
+    boundary_by_stage = build_boundary_by_stage(boundary_rows or [])
     stage_order = list(profile.get("stage_order", []))
     class_stage_candidate_map = dict(profile.get("class_stage_candidate_map", {}))
     mnemonic_stage_candidate_map = dict(profile.get("mnemonic_stage_candidate_map", {}))
@@ -845,7 +1017,12 @@ def build_focus_stage_row(
 
     stage_cells: dict[str, dict[str, Any] | None] = {}
     for stage in stage_order:
-        stage_cells[stage] = choose_worst_family(family_by_key, list(mapping.get(stage, [])))
+        stage_cells[stage] = choose_stage_timing_cell(
+            stage=stage,
+            candidate_keys=list(mapping.get(stage, [])),
+            family_by_key=family_by_key,
+            boundary_by_stage=boundary_by_stage,
+        )
 
     return {
         "kind": str(entry["kind"]),
@@ -857,6 +1034,7 @@ def build_focus_stage_row(
         "output_dir_name": str(entry["output_dir_name"]),
         "stage_cells": stage_cells,
         "family_rows": family_rows,
+        "boundary_rows": boundary_rows or [],
     }
 
 
@@ -872,7 +1050,8 @@ def collect_focus_stage_rows(
     for entry in metadata.get("focus_entries", []):
         focus_dir = focus_output_dir / str(entry["output_dir_name"])
         family_rows = collect_family_timing_rows(focus_dir, profile)
-        focus_row = build_focus_stage_row(profile, entry, family_rows)
+        boundary_rows = collect_stage_boundary_timing_rows(focus_dir, profile)
+        focus_row = build_focus_stage_row(profile, entry, family_rows, boundary_rows)
         if any(cell and cell.get("datapath_delay_ns") is not None for cell in focus_row["stage_cells"].values()):
             measured_rows += 1
         if entry["kind"] == "class":
@@ -912,16 +1091,55 @@ def render_stage_family_table(
 ) -> None:
     lines.extend(
         [
-            f"{heading_prefix} Pipeline Stage Family Timing",
+            f"{heading_prefix} Endpoint Family Timing",
             "",
-            "| Family | Stage | Data Path (ns) | Minimum Period (ns) | Fmax (MHz) | Worst Endpoint | Top Paths |",
-            "| --- | --- | ---: | ---: | ---: | --- | ---: |",
+            "- Endpoint-family timing uses `-to` endpoint groups only, so control feedback from another stage can appear in a family row.",
+            "",
+            "| Family | Stage | Data Path (ns) | Minimum Period (ns) | Fmax (MHz) | Worst Endpoint | Reported Paths | Unique Paths |",
+            "| --- | --- | ---: | ---: | ---: | --- | ---: | ---: |",
         ]
     )
     for row in family_rows:
         worst_endpoint = row["worst_path"]["end_pin"] if row.get("worst_path") else "NA"
         lines.append(
-            f"| {row['label']} | {row['stage']} | {fmt_float(row['datapath_delay_ns'])} | {fmt_float(row['min_period_ns'])} | {fmt_float(row['fmax_mhz'])} | `{worst_endpoint}` | {row['path_count']} |"
+            f"| {row['label']} | {row['stage']} | {fmt_float(row['datapath_delay_ns'])} | {fmt_float(row['min_period_ns'])} | {fmt_float(row['fmax_mhz'])} | `{worst_endpoint}` | {row['path_count']} | {row.get('unique_path_count', 'NA')} |"
+        )
+    lines.append("")
+
+
+def render_stage_boundary_table(
+    lines: list[str],
+    boundary_rows: list[dict[str, Any]],
+    *,
+    heading_prefix: str = "##",
+) -> None:
+    lines.extend(
+        [
+            f"{heading_prefix} True Stage Boundary Timing",
+            "",
+            "- True stage timing uses explicit `-from` launch pins and `-to` capture pins.",
+            "- WB is measured into the retained retire timing sink because there is no downstream pipeline register.",
+            "",
+        ]
+    )
+    if not boundary_rows:
+        lines.extend(["- No true stage boundary probes are configured.", ""])
+        return
+
+    lines.extend(
+        [
+            "| Boundary | Stage | Data Path (ns) | Minimum Period (ns) | Fmax (MHz) | Logic Levels | Route Share (%) | Worst Start | Worst Endpoint | Reported Paths | Unique Paths |",
+            "| --- | --- | ---: | ---: | ---: | ---: | ---: | --- | --- | ---: | ---: |",
+        ]
+    )
+    for row in boundary_rows:
+        worst_path = row.get("worst_path")
+        worst_start = worst_path["start_pin"] if worst_path else "NA"
+        worst_endpoint = worst_path["end_pin"] if worst_path else "NA"
+        logic_levels = worst_path["logic_levels"] if worst_path else None
+        route_share = worst_path["route_share_pct"] if worst_path else None
+        lines.append(
+            f"| {row['label']} | {row['stage']} | {fmt_float(row['datapath_delay_ns'])} | {fmt_float(row['min_period_ns'])} | {fmt_float(row['fmax_mhz'])} | {fmt_int(logic_levels)} | {fmt_float(route_share)} | `{worst_start}` | `{worst_endpoint}` | {row['path_count']} | {row.get('unique_path_count', 'NA')} |"
         )
     lines.append("")
 
@@ -1028,6 +1246,7 @@ def render_program_report_section(
     output_root: pathlib.Path,
     implementation_cfg: dict[str, object],
     family_rows: list[dict[str, Any]],
+    boundary_rows: list[dict[str, Any]],
     class_stage_rows: list[dict[str, Any]],
     mnemonic_stage_rows: list[dict[str, Any]],
     instruction_details: dict[str, Any],
@@ -1052,7 +1271,9 @@ def render_program_report_section(
 
     stage_order = list(pipeline_contract["profile"].get("stage_order", []))
     health_rows = build_stage_health_rows(pipeline_contract["profile"], family_rows)
+    boundary_health_rows = build_stage_boundary_health_rows(boundary_rows)
     warning_count = sum(1 for row in health_rows if row["status"] != "PASS")
+    boundary_warning_count = sum(1 for row in boundary_health_rows if row["status"] != "PASS")
     focus_count = int(focus_summary.get("focus_count", 0))
     measured_focus_count = int(focus_summary.get("measured_focus_count", 0))
     default_focus_status = "PASS" if focus_count > 0 and measured_focus_count == focus_count else "WARN"
@@ -1067,9 +1288,11 @@ def render_program_report_section(
     pipeline_ff_used = parse_int_metric(pipeline_metrics["ff_used"])
     valid_family_rows = [row for row in family_rows if row.get("min_period_ns") is not None]
     worst_stage_row = max(valid_family_rows, key=lambda row: float(row["min_period_ns"])) if valid_family_rows else None
+    valid_boundary_rows = [row for row in boundary_rows if row.get("min_period_ns") is not None]
+    worst_boundary_row = max(valid_boundary_rows, key=lambda row: float(row["min_period_ns"])) if valid_boundary_rows else None
     timing_verdict = determine_pipeline_verdict(
         pipeline_wns_ns=float(pipeline_metrics["wns_ns"]) if pipeline_metrics["wns_ns"] is not None else None,
-        warning_count=warning_count,
+        warning_count=warning_count + boundary_warning_count,
         focus_status=focus_status,
     )
     runtime_winner = describe_runtime_winner(single_execution["runtime_ns"], pipeline_execution["runtime_ns"])
@@ -1081,6 +1304,10 @@ def render_program_report_section(
         priorities.append(
             f"`Worst stage family`: `{worst_stage_row['label']}` in `{worst_stage_row['stage']}` reaches {fmt_float(float(worst_stage_row['min_period_ns']))} ns."
         )
+    if worst_boundary_row is not None:
+        priorities.append(
+            f"`Worst true stage boundary`: `{worst_boundary_row['label']}` in `{worst_boundary_row['stage']}` reaches {fmt_float(float(worst_boundary_row['min_period_ns']))} ns."
+        )
     if focus_status != "PASS":
         priorities.append(f"`Instruction-focus coverage`: {focus_detail}")
     if fmax_gain is not None and fmax_gain <= 0:
@@ -1090,28 +1317,160 @@ def render_program_report_section(
     if not priorities:
         priorities.append("`Steady state`: no urgent regression was detected in the current comparison set.")
 
+    timing_rows_for_route = [
+        row
+        for row in list(valid_boundary_rows) + list(valid_family_rows)
+        if row.get("worst_path") and row["worst_path"].get("route_share_pct") is not None
+    ]
+    route_shares = [float(row["worst_path"]["route_share_pct"]) for row in timing_rows_for_route]
+    avg_route_share = safe_mean(route_shares)
+    max_route_share = max(route_shares) if route_shares else None
+
+    analysis_findings: list[dict[str, Any]] = []
+    if pipeline_metrics["wns_ns"] is not None and float(pipeline_metrics["wns_ns"]) < 0:
+        analysis_findings.append(
+            {
+                "severity": "FAIL",
+                "category": "Timing Closure",
+                "title": "Negative post-route slack",
+                "evidence": f"Pipeline WNS is {fmt_float(float(pipeline_metrics['wns_ns']))} ns",
+                "impact": "The 5-stage implementation does not meet the configured clock period.",
+                "recommended_action": "Fix the worst true stage boundary first, then rerun the pipeline timing mode.",
+                "source_artifact": output_root / "pipeline",
+            }
+        )
+    if avg_route_share is not None and (avg_route_share >= 70.0 or (max_route_share is not None and max_route_share >= 75.0)):
+        analysis_findings.append(
+            {
+                "severity": "WARN",
+                "category": "Routing",
+                "title": "Route-dominant stage paths",
+                "evidence": f"Average route share {fmt_float(avg_route_share, 1)}%, max route share {fmt_float(max_route_share, 1)}%",
+                "impact": "Stage timing is likely limited by physical locality or fanout, not only logic depth.",
+                "recommended_action": "Check placement locality around the worst boundary and reduce high-fanout control/data nets.",
+                "source_artifact": output_root / "pipeline",
+            }
+        )
+    if worst_boundary_row is not None:
+        analysis_findings.append(
+            {
+                "severity": "WARN" if timing_verdict != "PASS" else "INFO",
+                "category": "Stage Boundary",
+                "title": str(worst_boundary_row["label"]),
+                "evidence": f"{worst_boundary_row['label']} reaches {fmt_float(float(worst_boundary_row['min_period_ns']))} ns",
+                "impact": "This register-to-register boundary is the best first target for pipeline timing closure.",
+                "recommended_action": f"Inspect `{worst_boundary_row['label']}` fan-in and split or retime the dominant logic before changing unrelated stages.",
+                "source_artifact": worst_boundary_row.get("report_path"),
+            }
+        )
+    elif worst_stage_row is not None:
+        analysis_findings.append(
+            {
+                "severity": "WARN" if timing_verdict != "PASS" else "INFO",
+                "category": "Endpoint Family",
+                "title": str(worst_stage_row["label"]),
+                "evidence": f"{worst_stage_row['label']} reaches {fmt_float(float(worst_stage_row['min_period_ns']))} ns",
+                "impact": "No stronger true-boundary bottleneck was available, so endpoint-family timing is the fallback target.",
+                "recommended_action": f"Review `{worst_stage_row['label']}` and regenerate true boundary probes if the endpoint group is too broad.",
+                "source_artifact": worst_stage_row.get("report_path"),
+            }
+        )
+    if focus_status != "PASS":
+        analysis_findings.append(
+            {
+                "severity": "WARN",
+                "category": "Instruction Focus",
+                "title": "Incomplete instruction-focus coverage",
+                "evidence": focus_detail,
+                "impact": "Class/mnemonic-level attribution may be incomplete for this program image.",
+                "recommended_action": "Rerun instruction-focus mode for the missing classes or narrow the focus filter to the failing mnemonic set.",
+                "source_artifact": output_root / "instruction_focus",
+            }
+        )
+    if runtime_delta_ns is not None and runtime_delta_ns > 0:
+        analysis_findings.append(
+            {
+                "severity": "WARN",
+                "category": "Execution Model",
+                "title": "Pipeline runtime regression",
+                "evidence": f"Pipeline estimate is {format_runtime_ns(runtime_delta_ns)} slower than single-cycle",
+                "impact": "Frequency gain is not compensating for pipeline fill, stall, and redirect penalties on this program.",
+                "recommended_action": "Inspect load-use stalls and redirect penalties before optimizing pure clock frequency.",
+                "source_artifact": program_selection["mem_path"],
+            }
+        )
+    if fmax_gain is not None and fmax_gain <= 0:
+        analysis_findings.append(
+            {
+                "severity": "WARN",
+                "category": "Frequency Headroom",
+                "title": "Pipeline Fmax did not improve",
+                "evidence": f"Pipeline Fmax delta vs single-cycle is {fmt_float(fmax_gain)} MHz",
+                "impact": "The pipeline split is not yet buying timing margin.",
+                "recommended_action": "Use the worst stage boundary as the clock-frequency optimization target.",
+                "source_artifact": output_root / "pipeline",
+            }
+        )
+    if not analysis_findings:
+        analysis_findings.append(
+            {
+                "severity": "PASS",
+                "category": "Timing",
+                "title": "No urgent regression detected",
+                "evidence": "Timing, focus coverage, and execution estimates did not raise a high-priority issue.",
+                "impact": "This artifact set is a good baseline for the next pipeline experiment.",
+                "recommended_action": "Keep this report as the baseline and compare against the next program image or RTL change.",
+                "source_artifact": output_root,
+            }
+        )
+
+    overall_status = highest_status([timing_verdict, focus_status] + [str(finding["severity"]) for finding in analysis_findings])
+    primary_bottleneck = (
+        f"{worst_boundary_row['label']} / {worst_boundary_row['stage']} at {fmt_float(float(worst_boundary_row['min_period_ns']))} ns"
+        if worst_boundary_row is not None
+        else (
+            f"{worst_stage_row['label']} / {worst_stage_row['stage']} at {fmt_float(float(worst_stage_row['min_period_ns']))} ns"
+            if worst_stage_row is not None
+            else str(analysis_findings[0]["title"])
+        )
+    )
+    root_causes = analysis_findings[:3]
+    recommended_actions = render_recommended_actions(analysis_findings, limit=3)
+
     lines = [
         f"## {program_selection['display_name']}",
         "",
         f"- Program key: `{program_selection['key']}`",
         f"- Last updated: `{generated_at}`",
         "",
-        "### Executive Summary",
+        "### 🧭 Summary",
         "",
         "| Item | Value |",
         "| --- | --- |",
-        f"| Timing verdict | {timing_verdict} |",
-        f"| Worst stage family | `{worst_stage_row['label']}` / `{worst_stage_row['stage']}` at {fmt_float(float(worst_stage_row['min_period_ns']))} ns |" if worst_stage_row is not None else "| Worst stage family | NA |",
+        f"| Overall verdict | {status_badge(overall_status)} |",
+        f"| Primary bottleneck | {primary_bottleneck} |",
         f"| Route status | {pipeline_metrics['route_status']} |",
         f"| Runtime winner | {runtime_winner} |",
-        f"| Instruction-focus coverage | {focus_detail} |",
-        f"| First action | {priorities[0]} |",
+        f"| Instruction-focus coverage | {status_badge(focus_status)} {focus_detail} |",
+        f"| First action | {recommended_actions[0].split('. ', 1)[1] if recommended_actions else priorities[0]} |",
         "",
-        "### Key Metrics",
+        "### 🧠 Analysis Result",
+        "",
+        "| Field | Result |",
+        "| --- | --- |",
+        f"| Overall Verdict | {status_badge(overall_status)} |",
+        f"| Primary Bottleneck | {primary_bottleneck} |",
+        f"| Root Cause Candidates | {min(3, len(root_causes))} candidate(s) promoted from parsed timing artifacts |",
+        f"| Recommended Next Actions | {min(3, len(recommended_actions))} action(s) |",
+        "",
+        "#### Root Cause Candidates",
+        "",
+        *render_finding_table(root_causes, limit=3),
+        "",
+        "### 📊 Key Metrics",
         "",
         "- `Delta` is `5-stage pipeline - single-cycle`.",
-        "- `Cycles`, `CPI`, and `Runtime` are estimated from the selected timing-program trace.",
-        "- `Pipeline Speedup` is runtime-based: `single-cycle runtime / 5-stage runtime`, so values above `1.000x` mean the pipeline is faster.",
+        "- Runtime and CPI are estimated from the selected timing-program trace.",
         f"- 5-stage execution model: `{pipeline_execution['model_note']} before the terminal self-loop`.",
         "",
         "| Metric | Single-Cycle | 5-Stage Pipeline | Delta |",
@@ -1126,138 +1485,43 @@ def render_program_report_section(
         f"| Runtime | {format_runtime_ns(single_execution['runtime_ns'])} | {format_runtime_ns(pipeline_execution['runtime_ns'])} | {format_runtime_ns(runtime_delta_ns)} |",
         f"| Pipeline Speedup (x) | {format_ratio(1.0 if runtime_speedup is not None else None)} | {format_ratio(runtime_speedup)} | {fmt_delta_ratio(1.0 if runtime_speedup is not None else None, runtime_speedup)} |",
         "",
-        "### Optimization Priority",
+        "### 🎯 Recommended Actions",
+        "",
+        *recommended_actions,
+        "",
+        "### 📁 Evidence",
+        "",
+        "| Evidence | Location |",
+        "| --- | --- |",
+        f"| Artifact root | `{output_root}` |",
+        f"| Single-cycle artifacts | `{output_root / 'single_cycle'}` |",
+        f"| 5-stage artifacts | `{output_root / 'pipeline'}` |",
+        f"| Instruction-focus artifacts | `{output_root / 'instruction_focus'}` |",
+        f"| Program memory | `{program_selection['mem_path']}` |",
+        f"| Instruction source | `{instruction_details['instruction_source']}` |",
+        "",
+        "<details>",
+        "<summary>Compact timing evidence</summary>",
         "",
     ]
-
-    for idx, priority in enumerate(priorities[:5], start=1):
-        normalized_priority = priority.rstrip(".") + "."
-        lines.append(f"{idx}. {normalized_priority}")
-    lines.append("")
-
+    render_stage_boundary_table(lines, boundary_rows, heading_prefix="####")
+    render_stage_family_table(lines, family_rows, heading_prefix="####")
     lines.extend(
         [
-            "### Timing Health",
+            "#### Focus Coverage Snapshot",
             "",
             "| Check | Status | Detail |",
             "| --- | --- | --- |",
-            f"| Stage family coverage | {'PASS' if warning_count == 0 else 'WARN'} | {len(family_rows) - warning_count}/{len(family_rows)} families resolved with post-route paths |",
-            f"| Instruction-focus coverage | {focus_status} | {focus_detail} |",
+            f"| Stage family coverage | {status_badge('PASS' if warning_count == 0 else 'WARN')} | {len(family_rows) - warning_count}/{len(family_rows)} families resolved with post-route paths |",
+            f"| True stage boundary coverage | {status_badge('PASS' if boundary_warning_count == 0 else 'WARN')} | {len(boundary_rows) - boundary_warning_count}/{len(boundary_rows)} boundaries resolved with register-to-register paths |",
+            f"| Instruction-focus coverage | {status_badge(focus_status)} | {focus_detail} |",
         ]
     )
     if focus_summary.get("selected_focuses"):
-        lines.append(f"| Focus filter | INFO | {', '.join(focus_summary['selected_focuses'])} |")
+        lines.append(f"| Focus filter | {status_badge('INFO')} | {', '.join(focus_summary['selected_focuses'])} |")
     for warning in instruction_details.get("warnings", []):
-        lines.append(f"| Instruction metadata | WARN | {warning} |")
-    for row in health_rows:
-        lines.append(f"| {row['family']} | {row['status']} | {row['detail']} |")
-    lines.append("")
-
-    lines.extend(
-        [
-            "### Stage Timing Analysis",
-            "",
-        ]
-    )
-    render_stage_family_table(lines, family_rows, heading_prefix="####")
-
-    lines.extend(
-        [
-            "### Instruction-Focus Summary",
-            "",
-            f"- Focus builds resolved with measured timing: `{measured_focus_count}/{focus_count}`.",
-            "- Focus runs use generated wrapper tops and focused images derived from the selected base program image.",
-            "- The original pipeline RTL is unchanged; only the nested ROM init-file parameter is overridden in the wrapper.",
-        ]
-    )
-    if focus_summary.get("selected_focuses"):
-        lines.append(f"- Active focus filter: `{', '.join(focus_summary['selected_focuses'])}`.")
-    lines.append("- Full measured and baseline-delta focus tables are moved to the appendix below.")
-    lines.append("")
-
-    lines.extend(
-        [
-            "### Appendix",
-            "",
-            "#### Run Metadata",
-            "",
-            f"- Single-cycle project: `{single_contract['project_name']}`",
-            f"- Pipeline project: `{pipeline_contract['project_name']}`",
-            f"- Single-cycle top: `{single_contract['top_name']}`",
-            f"- Pipeline top: `{pipeline_contract['top_name']}`",
-            f"- Part: `{pipeline_contract['part_name']}`",
-            f"- Program image: `{program_selection['display_name']}`",
-            f"- Program memory: `{program_selection['mem_path']}`",
-            f"- Instruction source: `{instruction_details['instruction_source']}`",
-            "",
-            "#### Full Instruction-Focus Tables",
-            "",
-            "- `Focused` tables below are actual per-focus Vivado timing results.",
-            "- `Delta` tables show `Focused - Base` where `Base` is the stage-family-mapped value from the unmodified pipeline build.",
-            "",
-        ]
-    )
-    if focus_count > 0:
-        render_stage_matrix_table(
-            lines,
-            "Focused RV32I Class Measured Timing",
-            "Class",
-            list(focus_summary.get("class_rows", [])),
-            stage_order,
-            heading_prefix="####",
-            include_class_column=False,
-            include_context_columns=True,
-        )
-        render_stage_matrix_table(
-            lines,
-            "Focused RV32I Mnemonic Measured Timing",
-            "Mnemonic",
-            list(focus_summary.get("mnemonic_rows", [])),
-            stage_order,
-            heading_prefix="####",
-            include_class_column=True,
-            include_context_columns=True,
-        )
-        render_stage_delta_table(
-            lines,
-            "Focused RV32I Class Baseline Delta",
-            "Class",
-            list(focus_summary.get("class_rows", [])),
-            class_stage_rows,
-            stage_order,
-            heading_prefix="####",
-            include_class_column=False,
-        )
-        render_stage_delta_table(
-            lines,
-            "Focused RV32I Mnemonic Baseline Delta",
-            "Mnemonic",
-            list(focus_summary.get("mnemonic_rows", [])),
-            mnemonic_stage_rows,
-            stage_order,
-            heading_prefix="####",
-            include_class_column=True,
-        )
-    else:
-        lines.extend(
-            [
-                "- No instruction-focus tables were generated for this run.",
-                "",
-            ]
-        )
-
-    lines.extend(
-        [
-            "#### Artifacts",
-            "",
-            f"- Directives: synth `{implementation_cfg['synth_directive']}`, opt `{implementation_cfg['opt_directive']}`, place `{implementation_cfg['place_directive']}`, route `{implementation_cfg['route_directive']}`",
-            f"- Phys-opt: `{implementation_cfg['phys_opt_directive']}` / `{implementation_cfg['post_route_phys_opt_directive']}`",
-            f"- Pipeline floorplan: `{implementation_cfg['core_pblock_clock_region'] or 'disabled'}`",
-            f"- Single-cycle artifacts: `{output_root / 'single_cycle'}`",
-            f"- 5-stage artifacts: `{output_root / 'pipeline'}`",
-            f"- Instruction-focus artifacts: `{output_root / 'instruction_focus'}`",
-        ]
-    )
+        lines.append(f"| Instruction metadata | {status_badge('WARN')} | {warning} |")
+    lines.extend(["", "</details>", ""])
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -1266,7 +1530,8 @@ def build_integrated_pipeline_detail_text(
     *,
     report_path: pathlib.Path,
 ) -> str:
-    detail_body = shift_markdown_headings(strip_first_markdown_heading(section_text), 1).rstrip()
+    compact_body = strip_noisy_report_sections(strip_first_markdown_heading(section_text))
+    detail_body = shift_markdown_headings(compact_body, 1).rstrip()
     generated_at = datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S %Z")
     lines = [
         f"- Source report: `{report_path}`",
@@ -1524,8 +1789,9 @@ def main(argv: list[str] | None = None) -> None:
     single_metrics = collect_project_metrics(single_metrics_output, float(single_contract["clock_period_ns"]))
     pipeline_metrics = collect_project_metrics(pipeline_metrics_output, float(pipeline_contract["clock_period_ns"]))
     family_rows = collect_family_timing_rows(pipeline_family_output, pipeline_profile)
-    class_stage_rows = build_class_stage_rows(pipeline_profile, instruction_details, family_rows)
-    mnemonic_stage_rows = build_mnemonic_stage_rows(pipeline_profile, instruction_details, family_rows)
+    boundary_rows = collect_stage_boundary_timing_rows(pipeline_family_output, pipeline_profile)
+    class_stage_rows = build_class_stage_rows(pipeline_profile, instruction_details, family_rows, boundary_rows)
+    mnemonic_stage_rows = build_mnemonic_stage_rows(pipeline_profile, instruction_details, family_rows, boundary_rows)
     if focus_metadata:
         focus_summary = collect_focus_stage_rows(pipeline_profile, focus_metadata, focus_output)
     tracker.step("Collected timing metrics and rendered comparison data")
@@ -1538,6 +1804,7 @@ def main(argv: list[str] | None = None) -> None:
         output_root,
         implementation_cfg,
         family_rows,
+        boundary_rows,
         class_stage_rows,
         mnemonic_stage_rows,
         instruction_details,
@@ -1546,6 +1813,7 @@ def main(argv: list[str] | None = None) -> None:
     )
     report_text = merge_program_report_section(report_path, str(selected_program["key"]), program_section_text)
     report_path.write_text(report_text, encoding="utf-8")
+    write_html_report(report_path.with_suffix(".html"), report_text, title=report_path.stem)
     integrated_report_text = merge_program_detail_section(
         integrated_report_path,
         program_selection=selected_program,
@@ -1558,6 +1826,7 @@ def main(argv: list[str] | None = None) -> None:
         resolve_program_selection=resolve_selected_program,
     )
     integrated_report_path.write_text(integrated_report_text, encoding="utf-8")
+    write_html_report(integrated_report_path.with_suffix(".html"), integrated_report_text, title=integrated_report_path.stem)
     tracker.step(f"Report section updated for {selected_program['display_name']} at {report_path}")
     print(f"[INFO] Wrote {report_path}")
 

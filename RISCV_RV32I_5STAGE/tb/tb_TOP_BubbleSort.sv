@@ -34,9 +34,17 @@ module tb_TOP_BubbleSort;
   logic iRstn;
   logic iUartRx;
   logic [LP_GPIO_WIDTH-1:0] iGpioIn;
+  logic iI2cSdaIn;
+  logic iSpiMiso;
   logic oUartTx;
   logic [LP_GPIO_WIDTH-1:0] oGpioOut;
   logic [LP_GPIO_WIDTH-1:0] oGpioOe;
+  logic oI2cScl;
+  logic oI2cSdaOut;
+  logic oI2cSdaOe;
+  logic oSpiSclk;
+  logic oSpiMosi;
+  logic oSpiCsN;
   logic [6:0] oSeg;
   logic oDp;
   logic [3:0] oDigitSel;
@@ -51,9 +59,17 @@ module tb_TOP_BubbleSort;
     .iRstn        (iRstn),
     .iUartRx      (iUartRx),
     .iGpioIn      (iGpioIn),
+    .iI2cSdaIn    (iI2cSdaIn),
+    .iSpiMiso     (iSpiMiso),
     .oUartTx      (oUartTx),
     .oGpioOut     (oGpioOut),
     .oGpioOe      (oGpioOe),
+    .oI2cScl      (oI2cScl),
+    .oI2cSdaOut   (oI2cSdaOut),
+    .oI2cSdaOe    (oI2cSdaOe),
+    .oSpiSclk     (oSpiSclk),
+    .oSpiMosi     (oSpiMosi),
+    .oSpiCsN      (oSpiCsN),
     .oSeg         (oSeg),
     .oDp          (oDp),
     .oDigitSel    (oDigitSel),
@@ -67,6 +83,8 @@ module tb_TOP_BubbleSort;
     iRstn       = 1'b0;
     iUartRx     = 1'b1;
     iGpioIn     = '0;
+    iI2cSdaIn   = 1'b1;
+    iSpiMiso    = 1'b0;
   end
 
   task automatic CheckEq32(
@@ -89,7 +107,7 @@ module tb_TOP_BubbleSort;
     integer Idx;
     begin
       for (Idx = 0; Idx < LP_ROM_DEPTH; Idx = Idx + 1) begin
-        dut.uFetchStage.uInstrRom.MemRom[Idx] = LP_NOP_INSTR;
+        dut.uInstrRom.MemRom[Idx] = LP_NOP_INSTR;
       end
     end
   endtask
@@ -108,7 +126,7 @@ module tb_TOP_BubbleSort;
     input logic [31:0] iInstr
   );
     begin
-      dut.uFetchStage.uInstrRom.MemRom[iPc[9:2]] = iInstr;
+      dut.uInstrRom.MemRom[iPc[9:2]] = iInstr;
     end
   endtask
 
@@ -181,13 +199,13 @@ module tb_TOP_BubbleSort;
     begin
       for (WaitIdx = 0; WaitIdx < iBudgetCycles; WaitIdx = WaitIdx + 1) begin
         @(posedge iClk);
-        if (dut.TrapEnterValid) begin
+        if (dut.uRv32iCore.TrapEnterValid) begin
           $fatal(
             1,
             "[FAIL] %s: unexpected trap (pc=0x%08x, mcause=0x%08x)",
             iContext,
-            dut.Pc,
-            dut.uCsrFile.Mcause
+            dut.uRv32iCore.Pc,
+            dut.uRv32iCore.uCsrFile.Mcause
           );
         end
         if (GetDmemWord(LP_DONE_FLAG_WORD) == 32'd1) begin
@@ -200,7 +218,7 @@ module tb_TOP_BubbleSort;
         "[FAIL] %s: done flag not observed within %0d cycles (pc=0x%08x, done=0x%08x)",
         iContext,
         iBudgetCycles,
-        dut.Pc,
+        dut.uRv32iCore.Pc,
         GetDmemWord(LP_DONE_FLAG_WORD)
       );
     end
@@ -215,7 +233,7 @@ module tb_TOP_BubbleSort;
     begin
       for (WaitIdx = 0; WaitIdx < iBudgetCycles; WaitIdx = WaitIdx + 1) begin
         @(posedge iClk);
-        if (dut.Pc == iExpectedPc) begin
+        if (dut.uRv32iCore.Pc == iExpectedPc) begin
           return;
         end
       end
@@ -226,7 +244,7 @@ module tb_TOP_BubbleSort;
         iContext,
         iExpectedPc,
         iBudgetCycles,
-        dut.Pc
+        dut.uRv32iCore.Pc
       );
     end
   endtask
@@ -255,7 +273,7 @@ module tb_TOP_BubbleSort;
     WaitForDoneFlag(LP_DONE_BUDGET_CYCLES, "bubble sort done flag");
     WaitForPc(LP_DONE_LOOP_PC, 20, "bubble sort done self-loop PC");
     CheckSortedArray();
-    CheckEq32(dut.Pc, LP_DONE_LOOP_PC, "bubble sort done self-loop PC");
+    CheckEq32(dut.uRv32iCore.Pc, LP_DONE_LOOP_PC, "bubble sort done self-loop PC");
 
     $display(
       "[PASS] bubble sort completed: array={%0d,%0d,%0d,%0d,%0d} sim_time_ns=%0t",

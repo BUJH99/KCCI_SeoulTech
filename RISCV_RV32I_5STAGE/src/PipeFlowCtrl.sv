@@ -15,6 +15,7 @@ module PipeFlowCtrl (
   input  logic iTrapCaptureValid,
   input  logic iTrapFromEx,
   input  logic iTrapFromMem,
+  input  logic iTrapFromInterrupt,
   input  logic iIdRedirectValid,
   input  logic iExRedirectValid,
   input  logic iIFIDValid,
@@ -40,6 +41,7 @@ module PipeFlowCtrl (
                       || iExRedirectValid;
   assign oIdexFlushReq = iTrapFromMem
                       || iTrapFromEx
+                      || iTrapFromInterrupt
                       || iExRedirectValid
                       || iLoadUseStall;
 

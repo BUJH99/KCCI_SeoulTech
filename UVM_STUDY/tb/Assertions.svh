@@ -1,7 +1,7 @@
 `include "uvm_macros.svh"
 import uvm_pkg::*;
 
-module Top_Assertions (
+module Assertions (
     Top_If vif
 );
 

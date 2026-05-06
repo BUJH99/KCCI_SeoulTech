@@ -16,21 +16,29 @@ module APBMux (
   input  logic        iPenable,
   input  logic [31:0] iUartPrdata,
   input  logic [31:0] iGpioPrdata,
-  input  logic [31:0] iFndPrdata,
+  input  logic [31:0] iI2cPrdata,
   input  logic [31:0] iIntcPrdata,
+  input  logic [31:0] iSpiPrdata,
+  input  logic [31:0] iFndPrdata,
   input  logic        iUartPready,
   input  logic        iGpioPready,
-  input  logic        iFndPready,
+  input  logic        iI2cPready,
   input  logic        iIntcPready,
+  input  logic        iSpiPready,
+  input  logic        iFndPready,
   input  logic        iUartPslverr,
   input  logic        iGpioPslverr,
-  input  logic        iFndPslverr,
+  input  logic        iI2cPslverr,
   input  logic        iIntcPslverr,
+  input  logic        iSpiPslverr,
+  input  logic        iFndPslverr,
 
   output logic        oUartPsel,
   output logic        oGpioPsel,
-  output logic        oFndPsel,
+  output logic        oI2cPsel,
   output logic        oIntcPsel,
+  output logic        oSpiPsel,
+  output logic        oFndPsel,
   output logic        oAccessComplete,
   output logic [31:0] oCompletionPrdata,
   output logic        oCompletionPslverr
@@ -40,8 +48,10 @@ module APBMux (
 
   logic        SelUart;
   logic        SelGpio;
-  logic        SelFnd;
+  logic        SelI2c;
   logic        SelIntc;
+  logic        SelSpi;
+  logic        SelFnd;
   logic        LocalErrAccess;
   logic        SelectedPready;
   logic [31:0] SelectedPrdata;
@@ -49,14 +59,18 @@ module APBMux (
 
   assign SelUart        = (iReqAddr[31:12] == LP_APB_UART_BASE[31:12]);
   assign SelGpio        = (iReqAddr[31:12] == LP_APB_GPIO_BASE[31:12]);
-  assign SelFnd         = (iReqAddr[31:12] == LP_APB_FND_BASE[31:12]);
+  assign SelI2c         = (iReqAddr[31:12] == LP_APB_I2C_BASE[31:12]);
   assign SelIntc        = (iReqAddr[31:12] == LP_APB_INTC_BASE[31:12]);
-  assign LocalErrAccess = !(SelUart || SelGpio || SelFnd || SelIntc);
+  assign SelSpi         = (iReqAddr[31:12] == LP_APB_SPI_BASE[31:12]);
+  assign SelFnd         = (iReqAddr[31:12] == LP_APB_FND_BASE[31:12]);
+  assign LocalErrAccess = !(SelUart || SelGpio || SelI2c || SelIntc || SelSpi || SelFnd);
 
   assign oUartPsel = iApbPhaseActive && SelUart;
   assign oGpioPsel = iApbPhaseActive && SelGpio;
-  assign oFndPsel  = iApbPhaseActive && SelFnd;
+  assign oI2cPsel  = iApbPhaseActive && SelI2c;
   assign oIntcPsel = iApbPhaseActive && SelIntc;
+  assign oSpiPsel  = iApbPhaseActive && SelSpi;
+  assign oFndPsel  = iApbPhaseActive && SelFnd;
 
   always_comb begin
     SelectedPready  = 1'b0;
@@ -71,14 +85,22 @@ module APBMux (
       SelectedPready  = iGpioPready;
       SelectedPrdata  = iGpioPrdata;
       SelectedPslverr = iGpioPslverr;
-    end else if (SelFnd) begin
-      SelectedPready  = iFndPready;
-      SelectedPrdata  = iFndPrdata;
-      SelectedPslverr = iFndPslverr;
+    end else if (SelI2c) begin
+      SelectedPready  = iI2cPready;
+      SelectedPrdata  = iI2cPrdata;
+      SelectedPslverr = iI2cPslverr;
     end else if (SelIntc) begin
       SelectedPready  = iIntcPready;
       SelectedPrdata  = iIntcPrdata;
       SelectedPslverr = iIntcPslverr;
+    end else if (SelSpi) begin
+      SelectedPready  = iSpiPready;
+      SelectedPrdata  = iSpiPrdata;
+      SelectedPslverr = iSpiPslverr;
+    end else if (SelFnd) begin
+      SelectedPready  = iFndPready;
+      SelectedPrdata  = iFndPrdata;
+      SelectedPslverr = iFndPslverr;
     end
   end
 

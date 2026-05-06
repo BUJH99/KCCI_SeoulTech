@@ -12,7 +12,7 @@ Summary:
 
 module ControlComposer (
   input  rv32i_pkg::OpcodeClassE iOpcodeClass,
-  
+
   input  rv32i_pkg::CTRL_DEC_t     iOpimmCtrlDec,
   input  rv32i_pkg::CTRL_DEC_t     iJumpCtrlDec,
   input  rv32i_pkg::CTRL_DEC_t     iLoadCtrlDec,
@@ -21,16 +21,16 @@ module ControlComposer (
   input  rv32i_pkg::CTRL_DEC_t     iStoreCtrlDec,
   input  rv32i_pkg::CTRL_DEC_t     iSystemCtrlDec,
   input  rv32i_pkg::CTRL_DEC_t     iUtypeCtrlDec,
-  
+
   output rv32i_pkg::CTRL_DEC_t     oCtrlDec
 );
 
   // ==== 1. Candidate Selection ====
-  
+
   // Selects the already-formed candidate bundle for the active opcode class.
   always_comb begin
     oCtrlDec = rv32i_pkg::LP_CTRL_DEC_DEFAULT;
-    
+
     unique case (iOpcodeClass)
       rv32i_pkg::OPCODE_CLASS_RTYPE:     oCtrlDec = iRtypeCtrlDec;
       rv32i_pkg::OPCODE_CLASS_OPIMM:     oCtrlDec = iOpimmCtrlDec;

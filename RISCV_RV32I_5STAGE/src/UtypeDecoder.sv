@@ -12,7 +12,7 @@ Summary:
 
 module UtypeDecoder (
   input  logic [6:0]                  iOpcode,
-  
+
   output rv32i_pkg::CTRL_DEC_t        oCtrlDec
 );
 

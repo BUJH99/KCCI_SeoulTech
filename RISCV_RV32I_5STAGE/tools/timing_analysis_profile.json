@@ -6,12 +6,12 @@
   "default_output_root": ".analysis/pipeline_perf",
   "default_report_path": "PIPELINE_PERF_REPORT.md",
   "integrated_report_path": "md/INTEGRATED_TIMING_REPORT.md",
-  "compare_single_cycle_project": "RISCV_32I_SINGLE",
+  "compare_single_cycle_project": "RISCV_RV32I_SINGLE",
   "focus_analysis": {
     "enabled": true,
     "output_subdir": "instruction_focus",
     "instruction_mem_relpath": "src/InstructionFORTIMING.mem",
-    "rom_param_path": "uFetchStage.uInstrRom.P_INIT_FILE",
+    "rom_param_path": "uInstrRom.P_INIT_FILE",
     "wrapper_module_prefix": "TimingFocusTop_",
     "wrapper_instance_name": "uDesign",
     "emit_class_focus": true,
@@ -126,6 +126,153 @@
       "pin_name_patterns": [
         "D"
       ]
+    }
+  ],
+  "stage_boundaries": [
+    {
+      "key": "stage_if",
+      "label": "IF Stage (PC -> IF/ID)",
+      "description": "Register-to-register timing from the program counter into the IF/ID pipeline register.",
+      "artifact_key": "stage_if",
+      "stage": "IF",
+      "from": {
+        "instance_patterns": [
+          "*uFetchStage/uPc*"
+        ],
+        "ref_name_patterns": [
+          "Pc"
+        ],
+        "pin_name_patterns": [
+          "C"
+        ]
+      },
+      "to": {
+        "instance_patterns": [
+          "*uIfIdReg*"
+        ],
+        "ref_name_patterns": [
+          "IfIdReg"
+        ],
+        "pin_name_patterns": [
+          "D"
+        ]
+      }
+    },
+    {
+      "key": "stage_id",
+      "label": "ID Stage (IF/ID -> ID/EX)",
+      "description": "Register-to-register timing from the IF/ID pipeline register into the ID/EX pipeline register.",
+      "artifact_key": "stage_id",
+      "stage": "ID",
+      "from": {
+        "instance_patterns": [
+          "*uIfIdReg*"
+        ],
+        "ref_name_patterns": [
+          "IfIdReg"
+        ],
+        "pin_name_patterns": [
+          "C"
+        ]
+      },
+      "to": {
+        "instance_patterns": [
+          "*uIdExReg*"
+        ],
+        "ref_name_patterns": [
+          "IdExReg"
+        ],
+        "pin_name_patterns": [
+          "D"
+        ]
+      }
+    },
+    {
+      "key": "stage_ex",
+      "label": "EX Stage (ID/EX -> EX/MEM)",
+      "description": "Register-to-register timing from the ID/EX pipeline register into the EX/MEM pipeline register.",
+      "artifact_key": "stage_ex",
+      "stage": "EX",
+      "from": {
+        "instance_patterns": [
+          "*uIdExReg*"
+        ],
+        "ref_name_patterns": [
+          "IdExReg"
+        ],
+        "pin_name_patterns": [
+          "C"
+        ]
+      },
+      "to": {
+        "instance_patterns": [
+          "*uExMemReg*"
+        ],
+        "ref_name_patterns": [
+          "ExMemReg"
+        ],
+        "pin_name_patterns": [
+          "D"
+        ]
+      }
+    },
+    {
+      "key": "stage_mem",
+      "label": "MEM Stage (EX/MEM -> MEM/WB)",
+      "description": "Register-to-register timing from the EX/MEM pipeline register into the MEM/WB pipeline register.",
+      "artifact_key": "stage_mem",
+      "stage": "MEM",
+      "from": {
+        "instance_patterns": [
+          "*uExMemReg*"
+        ],
+        "ref_name_patterns": [
+          "ExMemReg"
+        ],
+        "pin_name_patterns": [
+          "C"
+        ]
+      },
+      "to": {
+        "instance_patterns": [
+          "*uMemWbReg*"
+        ],
+        "ref_name_patterns": [
+          "MemWbReg"
+        ],
+        "pin_name_patterns": [
+          "D"
+        ]
+      }
+    },
+    {
+      "key": "stage_wb",
+      "label": "WB Stage (MEM/WB -> Retire Sink)",
+      "description": "Register-to-register timing from the MEM/WB pipeline register into the retained retire timing sink.",
+      "artifact_key": "stage_wb",
+      "stage": "WB",
+      "from": {
+        "instance_patterns": [
+          "*uMemWbReg*"
+        ],
+        "ref_name_patterns": [
+          "MemWbReg"
+        ],
+        "pin_name_patterns": [
+          "C"
+        ]
+      },
+      "to": {
+        "instance_patterns": [
+          "*TimingSinkReg*"
+        ],
+        "endpoint_patterns": [
+          "*TimingSinkReg*"
+        ],
+        "pin_name_patterns": [
+          "D"
+        ]
+      }
     }
   ],
   "family_active_classes": {
@@ -377,7 +524,7 @@
   },
   "implementation": {
     "synth_directive": "PerformanceOptimized",
-    "opt_directive": "Explore",
+    "opt_directive": "Default",
     "place_directive": "Explore",
     "phys_opt_directive": "AggressiveExplore",
     "route_directive": "Explore",

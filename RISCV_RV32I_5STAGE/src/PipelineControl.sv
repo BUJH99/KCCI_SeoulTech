@@ -30,6 +30,8 @@ module PipelineControl (
   input  logic                     iMieMeie,
   input  logic                     iMipMeip,
   input  logic [31:0]              iMtvec,
+  input  logic                     iIntcVectorValid,
+  input  logic [31:0]              iIntcVectorPc,
 
   output logic                     oPcWe,
   output logic                     oIFIDHold,
@@ -51,6 +53,7 @@ module PipelineControl (
   logic        TrapCaptureValid;
   logic        TrapFromEx;
   logic        TrapFromMem;
+  logic        TrapFromInterrupt;
 
   TrapController uTrapController (
     .iIFID              (iIFID),
@@ -67,12 +70,15 @@ module PipelineControl (
     .iMieMeie           (iMieMeie),
     .iMipMeip           (iMipMeip),
     .iMtvec             (iMtvec),
+    .iIntcVectorValid   (iIntcVectorValid),
+    .iIntcVectorPc      (iIntcVectorPc),
 
     .oTrapCaptureValid  (TrapCaptureValid),
     .oTrapEnterEpc      (oTrapEnterEpc),
     .oTrapEnterCause    (oTrapEnterCause),
     .oTrapFromEx        (TrapFromEx),
     .oTrapFromMem       (TrapFromMem),
+    .oTrapFromInterrupt (TrapFromInterrupt),
     .oTrapRedirectValid (oTrapRedirectValid),
     .oTrapRedirectPc    (oTrapRedirectPc),
     .oInterruptAccepted (oInterruptAccepted)
@@ -83,6 +89,7 @@ module PipelineControl (
     .iTrapCaptureValid (TrapCaptureValid),
     .iTrapFromEx       (TrapFromEx),
     .iTrapFromMem      (TrapFromMem),
+    .iTrapFromInterrupt(TrapFromInterrupt),
     .iIdRedirectValid  (iIdRedirectValid),
     .iExRedirectValid  (iExRedirectValid),
     .iIFIDValid        (iIFID.Valid),

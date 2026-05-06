@@ -14,7 +14,7 @@ module SystemDecoder (
   input  logic [6:0]         iOpcode,
   input  logic [2:0]         iFunct3,
   input  logic [11:0]        iImm12,
-  
+
   output rv32i_pkg::CTRL_DEC_t oCtrlDec
 );
 
@@ -25,7 +25,7 @@ module SystemDecoder (
     oCtrlDec = rv32i_pkg::LP_CTRL_DEC_DEFAULT;
 
     unique case (iOpcode)
-      
+
       // FENCE instructions are treated as Datapath NOPs in this simple pipeline
       rv32i_pkg::LP_OPCODE_MISCMEM: begin
         oCtrlDec.Illegal = (iFunct3 != 3'b000);
@@ -33,7 +33,7 @@ module SystemDecoder (
           oCtrlDec.Ctrl.SysOp = rv32i_pkg::SYS_FENCE;
         end
       end
-      
+
       // Environment calls and Breakpoints map to the Trap interface
       rv32i_pkg::LP_OPCODE_SYSTEM: begin
         if (iFunct3 == 3'b000) begin
@@ -44,7 +44,7 @@ module SystemDecoder (
               oCtrlDec.Ctrl.SysOp = rv32i_pkg::SYS_ECALL;
               oCtrlDec.TrapReq    = 1'b1;
             end
-            
+
             rv32i_pkg::LP_SYSTEM_EBREAK: begin
               oCtrlDec.Ctrl.SysOp = rv32i_pkg::SYS_EBREAK;
               oCtrlDec.TrapReq    = 1'b1;
@@ -53,7 +53,7 @@ module SystemDecoder (
             rv32i_pkg::LP_SYSTEM_MRET: begin
               oCtrlDec.Ctrl.SysOp = rv32i_pkg::SYS_MRET;
             end
-            
+
             default: oCtrlDec.Illegal = 1'b1;
           endcase
         end else if (rv32i_pkg::IsSupportedCsrAddr(iImm12)) begin
@@ -71,7 +71,7 @@ module SystemDecoder (
           oCtrlDec.Illegal = 1'b1;
         end
       end
-      
+
       default: oCtrlDec.Illegal = 1'b1;
     endcase
   end

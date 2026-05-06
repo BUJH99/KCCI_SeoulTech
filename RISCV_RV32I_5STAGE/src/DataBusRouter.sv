@@ -21,7 +21,9 @@ module DataBusRouter (
   import rv32i_pkg::*;
 
   assign oRamSel    = iReq.ReqValid && (iReq.ReqAddr[31:10] == LP_DATA_RAM_BASE[31:10]);
-  assign oApbSel    = iReq.ReqValid && (iReq.ReqAddr[31:14] == LP_APB_UART_BASE[31:14]);
+  assign oApbSel    = iReq.ReqValid
+                   && (iReq.ReqAddr >= LP_APB_BASE)
+                   && (iReq.ReqAddr <= LP_APB_LAST);
   assign oDecodeErr = iReq.ReqValid && !oRamSel && !oApbSel;
 
 endmodule

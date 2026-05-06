@@ -1,0 +1,58 @@
+version: "1"
+project:
+  name: SW_CLOCK
+hdl:
+  top: TOP
+  src_globs:
+    - src/**/*.v
+    - src/**/*.sv
+  tb_globs:
+    - tb/**/*.v
+    - tb/**/*.sv
+  inc_globs:
+    - include/**/*.vh
+    - include/**/*.svh
+    - inc/**/*.vh
+    - inc/**/*.svh
+  xdc_globs:
+    - constrs/**/*.xdc
+  exclude_globs: []
+sim:
+  tool: xsim
+  timescale: 1ns/1ps
+vivado:
+  part: xc7a35tcpg236-1
+  strategy: Default
+  power_limit_w: 2.5
+report:
+  enable: true
+  format: html
+vitis:
+  workspace: output/vitis/workspace
+  xsa:
+    path: output/vitis/xsa/${project.name}.xsa
+    include_bitstream: true
+    fixed: true
+    validate: true
+  platform:
+    name: ${project.name}_platform
+    xpfm: output/vitis/workspace/${project.name}_platform/export/${project.name}_platform/${project.name}_platform.xpfm
+    os: standalone
+    cpu: auto
+    domain_name: standalone_domain
+  applications:
+    - name: hello_world
+      template: empty
+      domain: standalone_domain
+      sources:
+        - sw/apps/hello_world/src/**/*
+        - sw/common/src/**/*
+      includes:
+        - sw/apps/hello_world/include
+        - sw/common/include
+      target: hw
+  run:
+    mode: hardware
+    hw_server: ""
+    device_index: null
+    auto: false

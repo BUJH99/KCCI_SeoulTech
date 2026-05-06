@@ -120,6 +120,15 @@ package rv32i_pkg;
 
   typedef struct packed {
     logic        ReqValid;
+    logic [31:0] ReqAddr;
+  } InstrBusReq_t;
+
+  typedef struct packed {
+    logic [31:0] RspRdata;
+  } InstrBusRsp_t;
+
+  typedef struct packed {
+    logic        ReqValid;
     logic        ReqWrite;
     logic [31:0] ReqAddr;
     logic [3:0]  ReqByteEn;
@@ -259,19 +268,47 @@ package rv32i_pkg;
   localparam logic [11:0] LP_CSR_MSCRATCH   = 12'h340;
   localparam logic [11:0] LP_CSR_MEPC       = 12'h341;
   localparam logic [11:0] LP_CSR_MCAUSE     = 12'h342;
+  localparam logic [11:0] LP_CSR_MTVAL      = 12'h343;
   localparam logic [11:0] LP_CSR_MIP        = 12'h344;
 
   localparam int unsigned LP_MSTATUS_MIE_BIT  = 3;
   localparam int unsigned LP_MSTATUS_MPIE_BIT = 7;
+  localparam int unsigned LP_MSTATUS_MPP_LSB  = 11;
+  localparam int unsigned LP_MSTATUS_MPP_MSB  = 12;
+  localparam int unsigned LP_MIE_MSIE_BIT     = 3;
+  localparam int unsigned LP_MIE_MTIE_BIT     = 7;
   localparam int unsigned LP_MIE_MEIE_BIT     = 11;
+  localparam int unsigned LP_MIP_MSIP_BIT     = 3;
+  localparam int unsigned LP_MIP_MTIP_BIT     = 7;
   localparam int unsigned LP_MIP_MEIP_BIT     = 11;
+
+  localparam int unsigned LP_MTVEC_MODE_LSB = 0;
+  localparam int unsigned LP_MTVEC_MODE_MSB = 1;
+  localparam logic [1:0]  LP_MTVEC_MODE_DIRECT   = 2'b00;
+  localparam logic [1:0]  LP_MTVEC_MODE_VECTORED = 2'b01;
+
+  localparam logic [1:0]  LP_MSTATUS_MPP_USER    = 2'b00;
+  localparam logic [1:0]  LP_MSTATUS_MPP_MACHINE = 2'b11;
 
   localparam logic [31:0] LP_DATA_RAM_BASE  = 32'h0000_0000;
   localparam logic [31:0] LP_DATA_RAM_LAST  = 32'h0000_03FF;
+  localparam logic [31:0] LP_APB_BASE       = 32'h4000_0000;
+  localparam logic [31:0] LP_APB_LAST       = 32'h4000_FFFF;
   localparam logic [31:0] LP_APB_UART_BASE  = 32'h4000_0000;
   localparam logic [31:0] LP_APB_GPIO_BASE  = 32'h4000_1000;
-  localparam logic [31:0] LP_APB_FND_BASE   = 32'h4000_2000;
+  localparam logic [31:0] LP_APB_I2C_BASE   = 32'h4000_2000;
   localparam logic [31:0] LP_APB_INTC_BASE  = 32'h4000_3000;
+  localparam logic [31:0] LP_APB_SPI_BASE   = 32'h4000_4000;
+  localparam logic [31:0] LP_APB_FND_BASE   = 32'h4000_5000;
+
+  localparam int unsigned LP_INTC_NUM_SOURCES   = 6;
+  localparam int unsigned LP_INTC_PRIORITY_WIDTH = 3;
+  localparam int unsigned LP_INTC_SRC_GPIO       = 1;
+  localparam int unsigned LP_INTC_SRC_UART_RX    = 2;
+  localparam int unsigned LP_INTC_SRC_I2C_EVENT  = 3;
+  localparam int unsigned LP_INTC_SRC_I2C_ERROR  = 4;
+  localparam int unsigned LP_INTC_SRC_SPI_EVENT  = 5;
+  localparam int unsigned LP_INTC_SRC_SPI_ERROR  = 6;
 
   localparam logic [31:0] LP_MCAUSE_ILLEGAL             = 32'd2;
   localparam logic [31:0] LP_MCAUSE_BREAKPOINT          = 32'd3;
@@ -280,6 +317,8 @@ package rv32i_pkg;
   localparam logic [31:0] LP_MCAUSE_STORE_MISALIGNED    = 32'd6;
   localparam logic [31:0] LP_MCAUSE_STORE_ACCESS        = 32'd7;
   localparam logic [31:0] LP_MCAUSE_ECALL_MMODE         = 32'd11;
+  localparam logic [31:0] LP_MCAUSE_MACHINE_SOFT_INT    = 32'h8000_0003;
+  localparam logic [31:0] LP_MCAUSE_MACHINE_TIMER_INT   = 32'h8000_0007;
   localparam logic [31:0] LP_MCAUSE_MACHINE_EXT_INT     = 32'h8000_000B;
 
   function automatic logic IsSupportedCsrAddr(input logic [11:0] iCsrAddr);
@@ -291,9 +330,22 @@ package rv32i_pkg;
         LP_CSR_MSCRATCH,
         LP_CSR_MEPC,
         LP_CSR_MCAUSE,
+        LP_CSR_MTVAL,
         LP_CSR_MIP: IsSupportedCsrAddr = 1'b1;
         default:    IsSupportedCsrAddr = 1'b0;
       endcase
+    end
+  endfunction
+
+  function automatic logic McauseIsInterrupt(input logic [31:0] iMcause);
+    begin
+      McauseIsInterrupt = iMcause[31];
+    end
+  endfunction
+
+  function automatic logic [30:0] McauseCode(input logic [31:0] iMcause);
+    begin
+      McauseCode = iMcause[30:0];
     end
   endfunction
 

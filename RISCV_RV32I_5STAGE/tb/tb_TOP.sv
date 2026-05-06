@@ -25,14 +25,30 @@ module tb_TOP;
   localparam int unsigned LP_UART_BAUD     = 9_600;
   localparam int unsigned LP_GPIO_WIDTH    = 8;
   localparam int unsigned LP_UART_BIT_CYCLES = (LP_SIM_CLK_HZ / LP_UART_BAUD);
+  localparam logic [31:0] LP_INTC_REG_ENABLE        = 32'h0000_0004;
+  localparam logic [31:0] LP_INTC_REG_CLAIM         = 32'h0000_0008;
+  localparam logic [31:0] LP_INTC_REG_COMPLETE      = 32'h0000_000C;
+  localparam logic [31:0] LP_INTC_REG_CTRL          = 32'h0000_0010;
+  localparam logic [31:0] LP_INTC_REG_THRESHOLD     = 32'h0000_0014;
+  localparam logic [31:0] LP_INTC_REG_PRIORITY_GPIO = 32'h0000_0024;
+  localparam logic [31:0] LP_INTC_REG_PRIORITY_UART = 32'h0000_0028;
+  localparam logic [31:0] LP_INTC_REG_VECTOR_ENTRY0 = 32'h0000_0080;
 
   logic iClk;
   logic iRstn;
   logic iUartRx;
   logic [LP_GPIO_WIDTH-1:0] iGpioIn;
+  logic iI2cSdaIn;
+  logic iSpiMiso;
   logic oUartTx;
   logic [LP_GPIO_WIDTH-1:0] oGpioOut;
   logic [LP_GPIO_WIDTH-1:0] oGpioOe;
+  logic oI2cScl;
+  logic oI2cSdaOut;
+  logic oI2cSdaOe;
+  logic oSpiSclk;
+  logic oSpiMosi;
+  logic oSpiCsN;
   logic [6:0] oSeg;
   logic oDp;
   logic [3:0] oDigitSel;
@@ -49,9 +65,17 @@ module tb_TOP;
     .iRstn       (iRstn),
     .iUartRx     (iUartRx),
     .iGpioIn     (iGpioIn),
+    .iI2cSdaIn   (iI2cSdaIn),
+    .iSpiMiso    (iSpiMiso),
     .oUartTx     (oUartTx),
     .oGpioOut    (oGpioOut),
     .oGpioOe     (oGpioOe),
+    .oI2cScl     (oI2cScl),
+    .oI2cSdaOut  (oI2cSdaOut),
+    .oI2cSdaOe   (oI2cSdaOe),
+    .oSpiSclk    (oSpiSclk),
+    .oSpiMosi    (oSpiMosi),
+    .oSpiCsN     (oSpiCsN),
     .oSeg        (oSeg),
     .oDp         (oDp),
     .oDigitSel   (oDigitSel),
@@ -69,6 +93,8 @@ module tb_TOP;
     iRstn      = 1'b0;
     iUartRx    = 1'b1;
     iGpioIn    = '0;
+    iI2cSdaIn  = 1'b1;
+    iSpiMiso   = 1'b0;
     CycleCount = 0;
   end
 
@@ -85,7 +111,6 @@ module tb_TOP;
     RunMisalignedStoreTrapTest();
     RunFenceAndX0Test();
     RunGpioMmioTest();
-    RunFndMmioTest();
     RunApbZeroWaitProtocolTest();
     RunApbWaitStateHoldTest();
     RunCsrOpsTest();
@@ -94,6 +119,8 @@ module tb_TOP;
     RunAccessFaultTest();
     RunUartInterruptTest();
     RunGpioInterruptTest();
+    RunMtvecVectoredInterruptTest();
+    RunIntcPerSourceVectorTest();
     RunInterruptPriorityTest();
     RunInterruptCompleteGateTest();
     RunInterruptMaskTest();
@@ -289,7 +316,7 @@ module tb_TOP;
   endfunction
 
   function automatic logic [31:0] GetRfWord(input int unsigned iIdx);
-    GetRfWord = dut.uDecodeStage.uRegfile.MemReg[iIdx];
+    GetRfWord = dut.uRv32iCore.uDecodeStage.uRegfile.MemReg[iIdx];
   endfunction
 
   function automatic logic [31:0] GetDmemWord(input int unsigned iIdx);
@@ -300,7 +327,7 @@ module tb_TOP;
     integer Idx;
     begin
       for (Idx = 0; Idx < LP_ROM_DEPTH; Idx = Idx + 1) begin
-        dut.uFetchStage.uInstrRom.MemRom[Idx] = LP_NOP_INSTR;
+        dut.uInstrRom.MemRom[Idx] = LP_NOP_INSTR;
       end
     end
   endtask
@@ -346,7 +373,7 @@ module tb_TOP;
     input logic [31:0] iInstr
   );
     begin
-      dut.uFetchStage.uInstrRom.MemRom[iPc[9:2]] = iInstr;
+      dut.uInstrRom.MemRom[iPc[9:2]] = iInstr;
     end
   endtask
 
@@ -359,7 +386,7 @@ module tb_TOP;
     begin
       for (WaitIdx = 0; WaitIdx < iBudgetCycles; WaitIdx = WaitIdx + 1) begin
         @(posedge iClk);
-        if (dut.RetireValid && (dut.RetirePc == iExpectedPc)) begin
+        if (dut.uRv32iCore.RetireValid && (dut.uRv32iCore.RetirePc == iExpectedPc)) begin
           return;
         end
       end
@@ -369,8 +396,8 @@ module tb_TOP;
         iContext,
         iExpectedPc,
         iBudgetCycles,
-        dut.RetireValid,
-        dut.RetirePc
+        dut.uRv32iCore.RetireValid,
+        dut.uRv32iCore.RetirePc
       );
     end
   endtask
@@ -384,7 +411,7 @@ module tb_TOP;
     begin
       for (WaitIdx = 0; WaitIdx < iBudgetCycles; WaitIdx = WaitIdx + 1) begin
         @(posedge iClk);
-        if (dut.IDEX.Valid && (dut.IDEX.Pc == iExpectedPc)) begin
+        if (dut.uRv32iCore.IDEX.Valid && (dut.uRv32iCore.IDEX.Pc == iExpectedPc)) begin
           return;
         end
       end
@@ -401,11 +428,25 @@ module tb_TOP;
     begin
       for (WaitIdx = 0; WaitIdx < iBudgetCycles; WaitIdx = WaitIdx + 1) begin
         @(posedge iClk);
-        if (dut.IFID.Valid && (dut.IFID.Pc == iExpectedPc)) begin
+        if (dut.uRv32iCore.IFID.Valid && (dut.uRv32iCore.IFID.Pc == iExpectedPc)) begin
           return;
         end
       end
-      $fatal(1, "[FAIL] %s: ID stage never observed PC 0x%08x", iContext, iExpectedPc);
+      $fatal(
+        1,
+        "[FAIL] %s: ID stage never observed PC 0x%08x (pc=0x%08x ifidValid=%0b ifidPc=0x%08x extIrq=%0b vectorValid=%0b vectorPc=0x%08x selectedId=%0d uartIrq=%0b gpioIrq=%0b)",
+        iContext,
+        iExpectedPc,
+        dut.uRv32iCore.Pc,
+        dut.uRv32iCore.IFID.Valid,
+        dut.uRv32iCore.IFID.Pc,
+        dut.ExtIrqPending,
+        dut.IntcVectorValid,
+        dut.IntcVectorPc,
+        dut.IntcSelectedSourceId,
+        dut.UartIrq,
+        dut.GpioIrq
+      );
     end
   endtask
 
@@ -420,9 +461,9 @@ module tb_TOP;
     begin
       for (WaitIdx = 0; WaitIdx < iBudgetCycles; WaitIdx = WaitIdx + 1) begin
         @(posedge iClk);
-        if ((dut.Pc == iExpectedVectorPc)
-         && (dut.uCsrFile.Mepc == iExpectedEpc)
-         && (dut.uCsrFile.Mcause == iExpectedCause)) begin
+        if ((dut.uRv32iCore.Pc == iExpectedVectorPc)
+         && (dut.uRv32iCore.uCsrFile.Mepc == iExpectedEpc)
+         && (dut.uRv32iCore.uCsrFile.Mcause == iExpectedCause)) begin
           return;
         end
       end
@@ -430,9 +471,9 @@ module tb_TOP;
         1,
         "[FAIL] %s: trap state not observed (pc=0x%08x mepc=0x%08x mcause=0x%08x)",
         iContext,
-        dut.Pc,
-        dut.uCsrFile.Mepc,
-        dut.uCsrFile.Mcause
+        dut.uRv32iCore.Pc,
+        dut.uRv32iCore.uCsrFile.Mepc,
+        dut.uRv32iCore.uCsrFile.Mcause
       );
     end
   endtask
@@ -535,19 +576,19 @@ module tb_TOP;
 
       for (WaitIdx = 0; WaitIdx < 2000; WaitIdx = WaitIdx + 1) begin
         @(posedge iClk);
-        if (!Started && dut.FetchValid) begin
+        if (!Started && dut.uRv32iCore.FetchValid) begin
           Started = 1'b1;
         end
         if (Started) begin
           ExecCycles = ExecCycles + 1;
         end
-        if (dut.RetireValid) begin
+        if (dut.uRv32iCore.RetireValid) begin
           RetiredInstrs = RetiredInstrs + 1;
         end
-        if (dut.LoadUseStall) begin
+        if (dut.uRv32iCore.LoadUseStall) begin
           StallCount = StallCount + 1;
         end
-        if (dut.RetireValid && (dut.RetirePc == LP_BENCH_DONE_PC)) begin
+        if (dut.uRv32iCore.RetireValid && (dut.uRv32iCore.RetirePc == LP_BENCH_DONE_PC)) begin
           DoneSeen = 1'b1;
           break;
         end
@@ -600,7 +641,7 @@ module tb_TOP;
 
       @(posedge iClk);
       @(posedge iClk);
-      CheckEq32(dut.Pc, LP_BENCH_DONE_PC, "benchmark done self-loop PC");
+      CheckEq32(dut.uRv32iCore.Pc, LP_BENCH_DONE_PC, "benchmark done self-loop PC");
     end
   endtask
 
@@ -613,8 +654,8 @@ module tb_TOP;
       ReleaseReset();
 
       WaitForExStagePc(32'd8, 20, "EX/MEM->EX bypass stage");
-      CheckEqFwd(dut.uExecuteStage.ExRs1FwdSel, FWD_EX_MEM, "EX/MEM->EX rs1 bypass");
-      CheckEqFwd(dut.uExecuteStage.ExRs2FwdSel, FWD_EX_MEM, "EX/MEM->EX rs2 bypass");
+      CheckEqFwd(dut.uRv32iCore.uExecuteStage.ExRs1FwdSel, FWD_EX_MEM, "EX/MEM->EX rs1 bypass");
+      CheckEqFwd(dut.uRv32iCore.uExecuteStage.ExRs2FwdSel, FWD_EX_MEM, "EX/MEM->EX rs2 bypass");
 
       WaitForRetirePc(32'd12, 40, "EX/MEM->EX final loop");
       CheckEq32(GetRfWord(2), 32'h0000_000A, "EX/MEM->EX result");
@@ -631,7 +672,7 @@ module tb_TOP;
       ReleaseReset();
 
       WaitForExStagePc(32'd12, 30, "MEM/WB->EX bypass stage");
-      CheckEqFwd(dut.uExecuteStage.ExRs1FwdSel, FWD_MEM_WB, "MEM/WB->EX rs1 bypass");
+      CheckEqFwd(dut.uRv32iCore.uExecuteStage.ExRs1FwdSel, FWD_MEM_WB, "MEM/WB->EX rs1 bypass");
       WaitForRetirePc(32'd16, 50, "MEM/WB->EX final loop");
       CheckEq32(GetRfWord(4), 32'h0000_0005, "MEM/WB->EX result");
     end
@@ -646,7 +687,7 @@ module tb_TOP;
       ReleaseReset();
 
       WaitForExStagePc(32'd8, 20, "store-data bypass stage");
-      CheckEqFwd(dut.uExecuteStage.ExRs2FwdSel, FWD_EX_MEM, "OPIMM->STORE store-data bypass");
+      CheckEqFwd(dut.uRv32iCore.uExecuteStage.ExRs2FwdSel, FWD_EX_MEM, "OPIMM->STORE store-data bypass");
       WaitForRetirePc(32'd12, 40, "store-data bypass final loop");
       CheckEq32(GetDmemWord(0), 32'h0000_0005, "store-data bypass memory write");
     end
@@ -668,14 +709,14 @@ module tb_TOP;
       SeenConsumerEx = 1'b0;
       for (WaitIdx = 0; WaitIdx < 50; WaitIdx = WaitIdx + 1) begin
         @(posedge iClk);
-        if (dut.LoadUseStall) begin
+        if (dut.uRv32iCore.LoadUseStall) begin
           StallCount = StallCount + 1;
         end
-        if (!SeenConsumerEx && dut.IDEX.Valid && (dut.IDEX.Pc == 32'd8)) begin
+        if (!SeenConsumerEx && dut.uRv32iCore.IDEX.Valid && (dut.uRv32iCore.IDEX.Pc == 32'd8)) begin
           SeenConsumerEx = 1'b1;
-          CheckEqFwd(dut.uExecuteStage.ExRs1FwdSel, FWD_MEM_WB, "LOAD->use MEM/WB bypass after stall");
+          CheckEqFwd(dut.uRv32iCore.uExecuteStage.ExRs1FwdSel, FWD_MEM_WB, "LOAD->use MEM/WB bypass after stall");
         end
-        if (dut.RetireValid && (dut.RetirePc == 32'd12)) begin
+        if (dut.uRv32iCore.RetireValid && (dut.uRv32iCore.RetirePc == 32'd12)) begin
           break;
         end
       end
@@ -699,8 +740,8 @@ module tb_TOP;
       ReleaseReset();
 
       WaitForExStagePc(32'd8, 30, "JALR forwarded-base stage");
-      CheckEqFwd(dut.uExecuteStage.ExRs1FwdSel, FWD_EX_MEM, "JALR rs1 bypass");
-      CheckEq1(dut.ExRedirectValid, 1'b1, "JALR EX redirect");
+      CheckEqFwd(dut.uRv32iCore.uExecuteStage.ExRs1FwdSel, FWD_EX_MEM, "JALR rs1 bypass");
+      CheckEq1(dut.uRv32iCore.ExRedirectValid, 1'b1, "JALR EX redirect");
 
       WaitForRetirePc(32'd24, 60, "JALR forwarded-base final loop");
       CheckEq32(GetRfWord(2), 32'h0000_000C, "JALR link register");
@@ -720,7 +761,7 @@ module tb_TOP;
       ReleaseReset();
 
       WaitForExStagePc(32'd8, 30, "taken branch flush stage");
-      CheckEq1(dut.ExRedirectValid, 1'b1, "taken branch EX redirect");
+      CheckEq1(dut.uRv32iCore.ExRedirectValid, 1'b1, "taken branch EX redirect");
       WaitForRetirePc(32'd20, 60, "taken branch final loop");
       CheckEq32(GetRfWord(2), 32'h0000_0000, "taken branch killed addi");
       CheckEq32(GetRfWord(3), 32'h0000_0001, "taken branch target addi");
@@ -738,7 +779,7 @@ module tb_TOP;
       ReleaseReset();
 
       WaitForIdStagePc(32'd8, 30, "ID-resolved JAL stage");
-      CheckEq1(dut.IdRedirectValid, 1'b1, "ID-resolved JAL redirect");
+      CheckEq1(dut.uRv32iCore.IdRedirectValid, 1'b1, "ID-resolved JAL redirect");
 
       WaitForRetirePc(32'd20, 70, "ID-resolved JAL final loop");
       CheckEq32(GetRfWord(5), 32'h0000_000C, "JAL link register");
@@ -799,7 +840,7 @@ module tb_TOP;
       WaitForRetirePc(32'd16, 60, "FENCE final loop");
       CheckEq32(GetRfWord(0), 32'h0000_0000, "x0 hard-wire after attempted write");
       CheckEq32(GetRfWord(2), 32'h0000_0002, "FENCE legal no-op retire");
-      CheckEq32(dut.uCsrFile.Mcause, 32'd0, "FENCE should not trap");
+      CheckEq32(dut.uRv32iCore.uCsrFile.Mcause, 32'd0, "FENCE should not trap");
     end
   endtask
 
@@ -824,41 +865,6 @@ module tb_TOP;
     end
   endtask
 
-  task automatic RunFndMmioTest;
-    begin
-      HoldResetAndClear();
-      LoadRomWord(32'd4,  EncLui(5'd1, 20'h40002));
-      LoadRomWord(32'd8,  EncLui(5'd2, 20'h00001));
-      LoadRomWord(32'd12, EncAddi(5'd2, 5'd2, 564));
-      LoadRomWord(32'd16, EncStore(5'd2, 5'd1, 0, 3'b010));
-      LoadRomWord(32'd20, EncAddi(5'd3, 5'd0, 5));
-      LoadRomWord(32'd24, EncStore(5'd3, 5'd1, 8, 3'b010));
-      LoadRomWord(32'd28, EncLoad(5'd4, 5'd1, 0, 3'b010));
-      LoadRomWord(32'd32, 32'h0000_006F);
-      ReleaseReset();
-
-      WaitForRetirePc(32'd32, 120, "FND MMIO readback");
-      WaitCycles(400);
-      CheckEq32(GetRfWord(4), 32'h0000_1234, "FND digits readback");
-      CheckEq1(oDigitSel == 4'b1111, 1'b0, "FND active scan");
-
-      HoldResetAndClear();
-      LoadRomWord(32'd4,  EncLui(5'd1, 20'h40002));
-      LoadRomWord(32'd8,  EncLui(5'd2, 20'h00001));
-      LoadRomWord(32'd12, EncAddi(5'd2, 5'd2, 564));
-      LoadRomWord(32'd16, EncStore(5'd2, 5'd1, 0, 3'b010));
-      LoadRomWord(32'd20, EncStore(5'd0, 5'd1, 12, 3'b010));
-      LoadRomWord(32'd24, 32'h0000_006F);
-      ReleaseReset();
-
-      WaitForRetirePc(32'd24, 100, "FND disable write");
-      WaitCycles(50);
-      CheckEq32({25'd0, oSeg}, 32'h0000_007F, "FND blank segments");
-      CheckEq1(oDp, 1'b1, "FND blank dp");
-      CheckEq32({28'd0, oDigitSel}, 32'h0000_000F, "FND blank digit select");
-    end
-  endtask
-
   task automatic RunApbZeroWaitProtocolTest;
     begin
       HoldResetAndClear();
@@ -876,7 +882,7 @@ module tb_TOP;
       CheckEq1(dut.GpioPsel, 1'b1, "GPIO access selects slave");
       CheckEq1(dut.ApbPenable, 1'b1, "GPIO access PENABLE high");
       CheckEq1(dut.DataBusRsp.RspReady, 1'b1, "GPIO zero-wait access ready");
-      CheckEq1(dut.MemApbStall, 1'b0, "GPIO zero-wait no stall");
+      CheckEq1(dut.uRv32iCore.MemApbStall, 1'b0, "GPIO zero-wait no stall");
 
       @(posedge iClk);
       CheckEq1(dut.GpioPsel, 1'b0, "GPIO post-access deasserts PSEL");
@@ -907,12 +913,12 @@ module tb_TOP;
       WaitForGpioApbSetup(12'h000, 4'hF, 32'h0000_00A5, 80, "GPIO wait-state hold");
       WaitForGpioApbAccess(12'h000, 4'hF, 32'h0000_00A5, 1'b0, 80, "GPIO wait-state hold");
 
-      PcHoldRef    = dut.Pc;
-      IFIDHoldRef  = dut.IFID;
-      IDEXHoldRef  = dut.IDEX;
-      EXMEMHoldRef = dut.EXMEM;
+      PcHoldRef    = dut.uRv32iCore.Pc;
+      IFIDHoldRef  = dut.uRv32iCore.IFID;
+      IDEXHoldRef  = dut.uRv32iCore.IDEX;
+      EXMEMHoldRef = dut.uRv32iCore.EXMEM;
 
-      CheckEq1(dut.MemApbStall, 1'b1, "APB wait-state stall asserted");
+      CheckEq1(dut.uRv32iCore.MemApbStall, 1'b1, "APB wait-state stall asserted");
       CheckEq32({24'd0, oGpioOut}, 32'h0000_0000, "APB wait-state defers GPIO write");
 
       for (WaitIdx = 0; WaitIdx < 3; WaitIdx = WaitIdx + 1) begin
@@ -921,25 +927,25 @@ module tb_TOP;
         CheckEq1(dut.GpioPsel, 1'b1, $sformatf("APB wait hold cycle %0d PSEL", WaitIdx));
         CheckEq1(dut.ApbPenable, 1'b1, $sformatf("APB wait hold cycle %0d PENABLE", WaitIdx));
         CheckEq1(dut.DataBusRsp.RspReady, 1'b0, $sformatf("APB wait hold cycle %0d ready", WaitIdx));
-        CheckEq1(dut.MemApbStall, 1'b1, $sformatf("APB wait hold cycle %0d stall", WaitIdx));
+        CheckEq1(dut.uRv32iCore.MemApbStall, 1'b1, $sformatf("APB wait hold cycle %0d stall", WaitIdx));
         CheckEq32({24'd0, oGpioOut}, 32'h0000_0000, $sformatf("APB wait hold cycle %0d GPIO side effect", WaitIdx));
 
-        if (dut.Pc !== PcHoldRef) begin
+        if (dut.uRv32iCore.Pc !== PcHoldRef) begin
           $fatal(1, "[FAIL] APB wait hold cycle %0d: PC changed during stall", WaitIdx);
         end
-        if (dut.IFID !== IFIDHoldRef) begin
+        if (dut.uRv32iCore.IFID !== IFIDHoldRef) begin
           $fatal(1, "[FAIL] APB wait hold cycle %0d: IF/ID changed during stall", WaitIdx);
         end
-        if (dut.IDEX !== IDEXHoldRef) begin
+        if (dut.uRv32iCore.IDEX !== IDEXHoldRef) begin
           $fatal(1, "[FAIL] APB wait hold cycle %0d: ID/EX changed during stall", WaitIdx);
         end
-        if (dut.EXMEM !== EXMEMHoldRef) begin
+        if (dut.uRv32iCore.EXMEM !== EXMEMHoldRef) begin
           $fatal(1, "[FAIL] APB wait hold cycle %0d: EX/MEM changed during stall", WaitIdx);
         end
-        if (dut.MEMWB.Valid && (dut.MEMWB.Pc == 32'd12)) begin
+        if (dut.uRv32iCore.MEMWB.Valid && (dut.uRv32iCore.MEMWB.Pc == 32'd12)) begin
           $fatal(1, "[FAIL] APB wait hold cycle %0d: waiting store reached MEM/WB early", WaitIdx);
         end
-        if (dut.RetireValid && (dut.RetirePc == 32'd12)) begin
+        if (dut.uRv32iCore.RetireValid && (dut.uRv32iCore.RetirePc == 32'd12)) begin
           $fatal(1, "[FAIL] APB wait hold cycle %0d: waiting store retired early", WaitIdx);
         end
       end
@@ -958,7 +964,7 @@ module tb_TOP;
 
       force dut.ApbSel   = 1'b1;
       force dut.ApbWrite = 1'b0;
-      force dut.BusAddr  = 32'h4000_4000;
+      force dut.BusAddr  = 32'h4000_6000;
       force dut.BusByteEn = 4'hF;
       force dut.BusWdata = 32'd0;
 
@@ -970,8 +976,10 @@ module tb_TOP;
       end
       CheckEq1(dut.UartPsel, 1'b0, "APB local error setup no UART select");
       CheckEq1(dut.GpioPsel, 1'b0, "APB local error setup no GPIO select");
-      CheckEq1(dut.FndPsel, 1'b0, "APB local error setup no FND select");
+      CheckEq1(dut.I2cPsel, 1'b0, "APB local error setup no I2C select");
       CheckEq1(dut.IntcPsel, 1'b0, "APB local error setup no INTC select");
+      CheckEq1(dut.SpiPsel, 1'b0, "APB local error setup no SPI select");
+      CheckEq1(dut.FndPsel, 1'b0, "APB local error setup no FND select");
       CheckEq1(dut.ApbPenable, 1'b0, "APB local error setup PENABLE low");
 
       for (WaitIdx = 0; WaitIdx < 10; WaitIdx = WaitIdx + 1) begin
@@ -982,8 +990,10 @@ module tb_TOP;
       end
       CheckEq1(dut.UartPsel, 1'b0, "APB local error access no UART select");
       CheckEq1(dut.GpioPsel, 1'b0, "APB local error access no GPIO select");
-      CheckEq1(dut.FndPsel, 1'b0, "APB local error access no FND select");
+      CheckEq1(dut.I2cPsel, 1'b0, "APB local error access no I2C select");
       CheckEq1(dut.IntcPsel, 1'b0, "APB local error access no INTC select");
+      CheckEq1(dut.SpiPsel, 1'b0, "APB local error access no SPI select");
+      CheckEq1(dut.FndPsel, 1'b0, "APB local error access no FND select");
       CheckEq1(dut.ApbPenable, 1'b1, "APB local error access PENABLE high");
       CheckEq1(dut.uAPBMASTER.oRspReady, 1'b1, "APB local error completion ready");
       CheckEq1(dut.uAPBMASTER.oPslverr, 1'b1, "APB local error completion error");
@@ -997,8 +1007,10 @@ module tb_TOP;
       @(posedge iClk);
       CheckEq1(dut.UartPsel, 1'b0, "APB local error post-access UART deselect");
       CheckEq1(dut.GpioPsel, 1'b0, "APB local error post-access GPIO deselect");
-      CheckEq1(dut.FndPsel, 1'b0, "APB local error post-access FND deselect");
+      CheckEq1(dut.I2cPsel, 1'b0, "APB local error post-access I2C deselect");
       CheckEq1(dut.IntcPsel, 1'b0, "APB local error post-access INTC deselect");
+      CheckEq1(dut.SpiPsel, 1'b0, "APB local error post-access SPI deselect");
+      CheckEq1(dut.FndPsel, 1'b0, "APB local error post-access FND deselect");
     end
   endtask
 
@@ -1043,13 +1055,13 @@ module tb_TOP;
       CheckEq32(GetRfWord(16), LP_TRAP_VECTOR, "mtvec readback");
       CheckEq32(GetRfWord(17), 32'h0000_0020, "mepc readback");
       CheckEq32(GetRfWord(18), 32'h0000_0005, "mcause readback");
-      CheckEq32(dut.uCsrFile.Mscratch, 32'h0000_0088, "mscratch final value");
-      CheckEq32(dut.uCsrFile.Mtvec, LP_TRAP_VECTOR, "mtvec final value");
-      CheckEq32(dut.uCsrFile.Mepc, 32'h0000_0020, "mepc final value");
-      CheckEq32(dut.uCsrFile.Mcause, 32'h0000_0005, "mcause final value");
-      CheckEq1(dut.uCsrFile.MstatusMie, 1'b0, "mstatus MIE cleared by CSRRCI");
-      CheckEq1(dut.uCsrFile.MieMeie, 1'b1, "mie MEIE set");
-      CheckEq1(dut.uCsrFile.MipMeipSw, 1'b1, "mip MEIP software pending");
+      CheckEq32(dut.uRv32iCore.uCsrFile.Mscratch, 32'h0000_0088, "mscratch final value");
+      CheckEq32(dut.uRv32iCore.uCsrFile.Mtvec, LP_TRAP_VECTOR, "mtvec final value");
+      CheckEq32(dut.uRv32iCore.uCsrFile.Mepc, 32'h0000_0020, "mepc final value");
+      CheckEq32(dut.uRv32iCore.uCsrFile.Mcause, 32'h0000_0005, "mcause final value");
+      CheckEq1(dut.uRv32iCore.uCsrFile.MstatusMie, 1'b0, "mstatus MIE cleared by CSRRCI");
+      CheckEq1(dut.uRv32iCore.uCsrFile.MieMeie, 1'b1, "mie MEIE set");
+      CheckEq1(dut.uRv32iCore.uCsrFile.MipMeipSw, 1'b1, "mip MEIP software pending");
     end
   endtask
 
@@ -1067,7 +1079,7 @@ module tb_TOP;
       WaitForRetirePc(32'd36, 100, "MRET final loop");
       CheckEq32(GetRfWord(2), 32'h0000_0000, "MRET skipped instruction");
       CheckEq32(GetRfWord(3), 32'h0000_0001, "MRET target execution");
-      CheckEq32(dut.uCsrFile.Mepc, 32'h0000_0020, "MRET keeps programmed mepc");
+      CheckEq32(dut.uRv32iCore.uCsrFile.Mepc, 32'h0000_0020, "MRET keeps programmed mepc");
     end
   endtask
 
@@ -1093,7 +1105,7 @@ module tb_TOP;
       HoldResetAndClear();
       LoadRomWord(32'd4,  EncAddi(5'd4, 5'd0, LP_TRAP_VECTOR));
       LoadRomWord(32'd8,  EncCsrReg(5'd0, 5'd4, LP_CSR_MTVEC, 3'b001));
-      LoadRomWord(32'd12, EncLui(5'd1, 20'h40004));
+      LoadRomWord(32'd12, EncLui(5'd1, 20'h40006));
       LoadRomWord(32'd16, EncLoad(5'd2, 5'd1, 0, 3'b010));
       LoadRomWord(32'd20, EncAddi(5'd3, 5'd0, 1));
       LoadRomWord(LP_TRAP_VECTOR, 32'h0000_006F);
@@ -1120,36 +1132,39 @@ module tb_TOP;
 
   task automatic RunUartInterruptTest;
     int unsigned WaitIdx;
+    localparam logic [31:0] LP_UART_TRAP_VECTOR = 32'd128;
     begin
       HoldResetAndClear();
-      LoadRomWord(32'd4,   EncAddi(5'd1, 5'd0, LP_TRAP_VECTOR));
+      LoadRomWord(32'd4,   EncAddi(5'd1, 5'd0, LP_UART_TRAP_VECTOR));
       LoadRomWord(32'd8,   EncCsrReg(5'd0, 5'd1, LP_CSR_MTVEC, 3'b001));
       LoadRomWord(32'd12,  EncLui(5'd3, 20'h40000));
       LoadRomWord(32'd16,  EncLui(5'd6, 20'h40001));
       LoadRomWord(32'd20,  EncLui(5'd7, LP_APB_INTC_BASE[31:12]));
       LoadRomWord(32'd24,  EncAddi(5'd4, 5'd0, 1));
       LoadRomWord(32'd28,  EncAddi(5'd8, 5'd0, 2));
-      LoadRomWord(32'd32,  EncStore(5'd4, 5'd3, 16, 3'b010));
-      LoadRomWord(32'd36,  EncStore(5'd8, 5'd7, 4, 3'b010));
-      LoadRomWord(32'd40,  EncLui(5'd5, 20'h00001));
-      LoadRomWord(32'd44,  EncAddi(5'd5, 5'd5, -2048));
-      LoadRomWord(32'd48,  EncCsrReg(5'd0, 5'd5, LP_CSR_MIE, 3'b001));
-      LoadRomWord(32'd52,  EncCsrImm(5'd0, 5'd8, LP_CSR_MSTATUS, 3'b101));
-      LoadRomWord(32'd56,  32'h0000_006F);
-      LoadRomWord(LP_TRAP_VECTOR,       EncCsrImm(5'd0, 5'd8, LP_CSR_MSTATUS, 3'b111));
-      LoadRomWord(LP_TRAP_VECTOR + 4,   EncLoad(5'd12, 5'd7, 8, 3'b010));
-      LoadRomWord(LP_TRAP_VECTOR + 8,   EncLoad(5'd11, 5'd3, 12, 3'b010));
-      LoadRomWord(LP_TRAP_VECTOR + 12,  EncStore(5'd8, 5'd7, 12, 3'b010));
-      LoadRomWord(LP_TRAP_VECTOR + 16,  EncAddi(5'd10, 5'd10, 1));
-      LoadRomWord(LP_TRAP_VECTOR + 20,  EncMret());
+      LoadRomWord(32'd32,  EncAddi(5'd9, 5'd0, 3));
+      LoadRomWord(32'd36,  EncStore(5'd4, 5'd3, 16, 3'b010));
+      LoadRomWord(32'd40,  EncStore(5'd9, 5'd7, LP_INTC_REG_PRIORITY_UART, 3'b010));
+      LoadRomWord(32'd44,  EncStore(5'd8, 5'd7, LP_INTC_REG_ENABLE, 3'b010));
+      LoadRomWord(32'd48,  EncLui(5'd5, 20'h00001));
+      LoadRomWord(32'd52,  EncAddi(5'd5, 5'd5, -2048));
+      LoadRomWord(32'd56,  EncCsrReg(5'd0, 5'd5, LP_CSR_MIE, 3'b001));
+      LoadRomWord(32'd60,  EncCsrImm(5'd0, 5'd8, LP_CSR_MSTATUS, 3'b101));
+      LoadRomWord(32'd64,  32'h0000_006F);
+      LoadRomWord(LP_UART_TRAP_VECTOR,       EncCsrImm(5'd0, 5'd8, LP_CSR_MSTATUS, 3'b111));
+      LoadRomWord(LP_UART_TRAP_VECTOR + 4,   EncLoad(5'd12, 5'd7, LP_INTC_REG_CLAIM, 3'b010));
+      LoadRomWord(LP_UART_TRAP_VECTOR + 8,   EncLoad(5'd11, 5'd3, 12, 3'b010));
+      LoadRomWord(LP_UART_TRAP_VECTOR + 12,  EncStore(5'd8, 5'd7, LP_INTC_REG_COMPLETE, 3'b010));
+      LoadRomWord(LP_UART_TRAP_VECTOR + 16,  EncAddi(5'd10, 5'd10, 1));
+      LoadRomWord(LP_UART_TRAP_VECTOR + 20,  EncMret());
       ReleaseReset();
 
-      WaitCycles(20);
+      WaitForRetirePc(32'd64, 200, "UART IRQ init loop");
       SendUartByte(8'hA5);
 
       for (WaitIdx = 0; WaitIdx < 400; WaitIdx = WaitIdx + 1) begin
         @(posedge iClk);
-        if ((GetRfWord(10) == 32'h0000_0001) && (GetRfWord(11) == 32'h0000_00A5) && (dut.Pc == 32'd56)) begin
+        if ((GetRfWord(10) == 32'h0000_0001) && (GetRfWord(11) == 32'h0000_00A5) && (dut.uRv32iCore.Pc == 32'd64)) begin
           break;
         end
       end
@@ -1157,8 +1172,8 @@ module tb_TOP;
       CheckEq32(GetRfWord(10), 32'h0000_0001, "UART IRQ handler count");
       CheckEq32(GetRfWord(11), 32'h0000_00A5, "UART IRQ RXDATA pop");
       CheckEq32(GetRfWord(12), 32'h0000_0002, "UART IRQ claim id");
-      CheckEq32(dut.uCsrFile.Mcause, LP_MCAUSE_MACHINE_EXT_INT, "UART IRQ mcause");
-      CheckEq32(dut.uCsrFile.Mepc, 32'd56, "UART IRQ mepc");
+      CheckEq32(dut.uRv32iCore.uCsrFile.Mcause, LP_MCAUSE_MACHINE_EXT_INT, "UART IRQ mcause");
+      CheckEq32(dut.uRv32iCore.uCsrFile.Mepc, 32'd64, "UART IRQ mepc");
       CheckEq1(dut.UartIrq, 1'b0, "UART IRQ cleared after RXDATA pop");
       CheckEq1(dut.ExtIrqPending, 1'b0, "UART IRQ cleared at interrupt controller");
     end
@@ -1174,45 +1189,198 @@ module tb_TOP;
       LoadRomWord(32'd16,  EncLui(5'd6, 20'h40001));
       LoadRomWord(32'd20,  EncLui(5'd7, LP_APB_INTC_BASE[31:12]));
       LoadRomWord(32'd24,  EncAddi(5'd4, 5'd0, 1));
-      LoadRomWord(32'd28,  EncStore(5'd4, 5'd6, 12, 3'b010));
-      LoadRomWord(32'd32,  EncStore(5'd4, 5'd7, 4, 3'b010));
-      LoadRomWord(32'd36,  EncLui(5'd5, 20'h00001));
-      LoadRomWord(32'd40,  EncAddi(5'd5, 5'd5, -2048));
-      LoadRomWord(32'd44,  EncCsrReg(5'd0, 5'd5, LP_CSR_MIE, 3'b001));
-      LoadRomWord(32'd48,  EncCsrImm(5'd0, 5'd8, LP_CSR_MSTATUS, 3'b101));
-      LoadRomWord(32'd52,  32'h0000_006F);
+      LoadRomWord(32'd28,  EncAddi(5'd9, 5'd0, 3));
+      LoadRomWord(32'd32,  EncStore(5'd4, 5'd6, 12, 3'b010));
+      LoadRomWord(32'd36,  EncStore(5'd9, 5'd7, LP_INTC_REG_PRIORITY_GPIO, 3'b010));
+      LoadRomWord(32'd40,  EncStore(5'd4, 5'd7, LP_INTC_REG_ENABLE, 3'b010));
+      LoadRomWord(32'd44,  EncLui(5'd5, 20'h00001));
+      LoadRomWord(32'd48,  EncAddi(5'd5, 5'd5, -2048));
+      LoadRomWord(32'd52,  EncCsrReg(5'd0, 5'd5, LP_CSR_MIE, 3'b001));
+      LoadRomWord(32'd56,  EncCsrImm(5'd0, 5'd8, LP_CSR_MSTATUS, 3'b101));
+      LoadRomWord(32'd60,  32'h0000_006F);
       LoadRomWord(LP_TRAP_VECTOR,       EncCsrImm(5'd0, 5'd8, LP_CSR_MSTATUS, 3'b111));
-      LoadRomWord(LP_TRAP_VECTOR + 4,   EncLoad(5'd12, 5'd7, 8, 3'b010));
+      LoadRomWord(LP_TRAP_VECTOR + 4,   EncLoad(5'd12, 5'd7, LP_INTC_REG_CLAIM, 3'b010));
       LoadRomWord(LP_TRAP_VECTOR + 8,   EncStore(5'd4, 5'd6, 20, 3'b010));
-      LoadRomWord(LP_TRAP_VECTOR + 12,  EncStore(5'd4, 5'd7, 12, 3'b010));
+      LoadRomWord(LP_TRAP_VECTOR + 12,  EncStore(5'd4, 5'd7, LP_INTC_REG_COMPLETE, 3'b010));
       LoadRomWord(LP_TRAP_VECTOR + 16,  EncAddi(5'd10, 5'd10, 1));
       LoadRomWord(LP_TRAP_VECTOR + 20,  EncMret());
       ReleaseReset();
 
-      WaitCycles(20);
+      WaitForRetirePc(32'd60, 200, "GPIO IRQ init loop");
       @(negedge iClk);
       iGpioIn[0] = 1'b1;
       WaitCycles(4);
 
       for (WaitIdx = 0; WaitIdx < 250; WaitIdx = WaitIdx + 1) begin
         @(posedge iClk);
-        if ((GetRfWord(10) == 32'h0000_0001) && (dut.Pc == 32'd52)) begin
+        if ((GetRfWord(10) == 32'h0000_0001) && (dut.uRv32iCore.Pc == 32'd60)) begin
           break;
         end
       end
 
       CheckEq32(GetRfWord(10), 32'h0000_0001, "GPIO IRQ handler count");
       CheckEq32(GetRfWord(12), 32'h0000_0001, "GPIO IRQ claim id");
-      CheckEq32(dut.uCsrFile.Mcause, LP_MCAUSE_MACHINE_EXT_INT, "GPIO IRQ mcause");
-      CheckEq32(dut.uCsrFile.Mepc, 32'd52, "GPIO IRQ mepc");
+      CheckEq32(dut.uRv32iCore.uCsrFile.Mcause, LP_MCAUSE_MACHINE_EXT_INT, "GPIO IRQ mcause");
+      CheckEq32(dut.uRv32iCore.uCsrFile.Mepc, 32'd60, "GPIO IRQ mepc");
       CheckEq1(dut.GpioIrq, 1'b0, "GPIO IRQ cleared by W1C");
       CheckEq1(dut.ExtIrqPending, 1'b0, "GPIO IRQ cleared at interrupt controller");
     end
   endtask
 
+  task automatic RunMtvecVectoredInterruptTest;
+    int unsigned WaitIdx;
+    localparam logic [31:0] LP_VECTORED_BASE   = 32'd128;
+    localparam logic [31:0] LP_VECTORED_TARGET = LP_VECTORED_BASE + 32'd44;
+    localparam logic [31:0] LP_MAIN_LOOP_PC    = 32'd56;
+    begin
+      HoldResetAndClear();
+      LoadRomWord(32'd4,   EncAddi(5'd1, 5'd0, LP_VECTORED_BASE | 32'd1));
+      LoadRomWord(32'd8,   EncCsrReg(5'd0, 5'd1, LP_CSR_MTVEC, 3'b001));
+      LoadRomWord(32'd12,  EncLui(5'd6, 20'h40001));
+      LoadRomWord(32'd16,  EncLui(5'd7, LP_APB_INTC_BASE[31:12]));
+      LoadRomWord(32'd20,  EncAddi(5'd4, 5'd0, 1));
+      LoadRomWord(32'd24,  EncAddi(5'd9, 5'd0, 3));
+      LoadRomWord(32'd28,  EncStore(5'd4, 5'd6, 12, 3'b010));
+      LoadRomWord(32'd32,  EncStore(5'd9, 5'd7, LP_INTC_REG_PRIORITY_GPIO, 3'b010));
+      LoadRomWord(32'd36,  EncStore(5'd4, 5'd7, LP_INTC_REG_ENABLE, 3'b010));
+      LoadRomWord(32'd40,  EncLui(5'd5, 20'h00001));
+      LoadRomWord(32'd44,  EncAddi(5'd5, 5'd5, -2048));
+      LoadRomWord(32'd48,  EncCsrReg(5'd0, 5'd5, LP_CSR_MIE, 3'b001));
+      LoadRomWord(32'd52,  EncCsrImm(5'd0, 5'd8, LP_CSR_MSTATUS, 3'b101));
+      LoadRomWord(LP_MAIN_LOOP_PC, 32'h0000_006F);
+
+      LoadRomWord(LP_VECTORED_TARGET,       EncLoad(5'd12, 5'd7, LP_INTC_REG_CLAIM, 3'b010));
+      LoadRomWord(LP_VECTORED_TARGET + 4,   EncStore(5'd4, 5'd6, 20, 3'b010));
+      LoadRomWord(LP_VECTORED_TARGET + 8,   EncStore(5'd12, 5'd7, LP_INTC_REG_COMPLETE, 3'b010));
+      LoadRomWord(LP_VECTORED_TARGET + 12,  EncAddi(5'd10, 5'd10, 1));
+      LoadRomWord(LP_VECTORED_TARGET + 16,  EncMret());
+      ReleaseReset();
+
+      WaitForRetirePc(LP_MAIN_LOOP_PC, 200, "mtvec vectored IRQ init loop");
+      @(negedge iClk);
+      iGpioIn[0] = 1'b1;
+      WaitForIdStagePc(LP_VECTORED_TARGET, 120, "mtvec vectored external IRQ target");
+
+      for (WaitIdx = 0; WaitIdx < 250; WaitIdx = WaitIdx + 1) begin
+        @(posedge iClk);
+        if ((GetRfWord(10) == 32'h0000_0001) && (dut.uRv32iCore.Pc == LP_MAIN_LOOP_PC)) begin
+          break;
+        end
+      end
+
+      CheckEq32(GetRfWord(10), 32'h0000_0001, "mtvec vectored GPIO handler count");
+      CheckEq32(GetRfWord(12), 32'h0000_0001, "mtvec vectored GPIO claim id");
+      CheckEq32(dut.uRv32iCore.uCsrFile.Mtvec, LP_VECTORED_BASE | 32'd1, "mtvec vectored mode readback");
+      CheckEq32(dut.uRv32iCore.uCsrFile.Mcause, LP_MCAUSE_MACHINE_EXT_INT, "mtvec vectored IRQ mcause");
+      CheckEq32(dut.uRv32iCore.uCsrFile.Mepc, LP_MAIN_LOOP_PC, "mtvec vectored IRQ mepc");
+      CheckEq1(dut.ExtIrqPending, 1'b0, "mtvec vectored IRQ cleared at interrupt controller");
+    end
+  endtask
+
+  task automatic RunIntcPerSourceVectorTest;
+    int unsigned WaitIdx;
+    localparam logic [31:0] LP_COMMON_TRAP_VECTOR = 32'd128;
+    localparam logic [31:0] LP_GPIO_VECTOR_ENTRY  = LP_INTC_REG_VECTOR_ENTRY0 + 32'h0000_0004;
+    localparam logic [31:0] LP_UART_VECTOR_ENTRY  = LP_INTC_REG_VECTOR_ENTRY0 + 32'h0000_0008;
+    localparam logic [31:0] LP_GPIO_HANDLER       = 32'd320;
+    localparam logic [31:0] LP_UART_HANDLER       = 32'd352;
+    localparam logic [31:0] LP_MAIN_LOOP_PC       = 32'd92;
+    begin
+      HoldResetAndClear();
+      LoadRomWord(32'd4,   EncAddi(5'd1, 5'd0, LP_COMMON_TRAP_VECTOR));
+      LoadRomWord(32'd8,   EncCsrReg(5'd0, 5'd1, LP_CSR_MTVEC, 3'b001));
+      LoadRomWord(32'd12,  EncLui(5'd3, 20'h40000));
+      LoadRomWord(32'd16,  EncLui(5'd6, 20'h40001));
+      LoadRomWord(32'd20,  EncLui(5'd7, LP_APB_INTC_BASE[31:12]));
+      LoadRomWord(32'd24,  EncAddi(5'd4, 5'd0, 1));
+      LoadRomWord(32'd28,  EncAddi(5'd8, 5'd0, 2));
+      LoadRomWord(32'd32,  EncAddi(5'd9, 5'd0, 3));
+      LoadRomWord(32'd36,  EncAddi(5'd13, 5'd0, LP_GPIO_HANDLER));
+      LoadRomWord(32'd40,  EncAddi(5'd14, 5'd0, LP_UART_HANDLER));
+      LoadRomWord(32'd44,  EncStore(5'd4, 5'd6, 12, 3'b010));
+      LoadRomWord(32'd48,  EncStore(5'd4, 5'd3, 16, 3'b010));
+      LoadRomWord(32'd52,  EncStore(5'd9, 5'd7, LP_INTC_REG_PRIORITY_GPIO, 3'b010));
+      LoadRomWord(32'd56,  EncStore(5'd9, 5'd7, LP_INTC_REG_PRIORITY_UART, 3'b010));
+      LoadRomWord(32'd60,  EncStore(5'd13, 5'd7, LP_GPIO_VECTOR_ENTRY, 3'b010));
+      LoadRomWord(32'd64,  EncStore(5'd14, 5'd7, LP_UART_VECTOR_ENTRY, 3'b010));
+      LoadRomWord(32'd68,  EncStore(5'd4, 5'd7, LP_INTC_REG_CTRL, 3'b010));
+      LoadRomWord(32'd72,  EncStore(5'd9, 5'd7, LP_INTC_REG_ENABLE, 3'b010));
+      LoadRomWord(32'd76,  EncLui(5'd5, 20'h00001));
+      LoadRomWord(32'd80,  EncAddi(5'd5, 5'd5, -2048));
+      LoadRomWord(32'd84,  EncCsrReg(5'd0, 5'd5, LP_CSR_MIE, 3'b001));
+      LoadRomWord(32'd88,  EncCsrImm(5'd0, 5'd8, LP_CSR_MSTATUS, 3'b101));
+      LoadRomWord(LP_MAIN_LOOP_PC, 32'h0000_006F);
+
+      LoadRomWord(LP_COMMON_TRAP_VECTOR,      EncAddi(5'd31, 5'd31, 1));
+      LoadRomWord(LP_COMMON_TRAP_VECTOR + 4,  EncMret());
+
+      LoadRomWord(LP_GPIO_HANDLER,       EncLoad(5'd12, 5'd7, LP_INTC_REG_CLAIM, 3'b010));
+      LoadRomWord(LP_GPIO_HANDLER + 4,   EncStore(5'd4, 5'd6, 20, 3'b010));
+      LoadRomWord(LP_GPIO_HANDLER + 8,   EncStore(5'd12, 5'd7, LP_INTC_REG_COMPLETE, 3'b010));
+      LoadRomWord(LP_GPIO_HANDLER + 12,  EncAddi(5'd10, 5'd10, 1));
+      LoadRomWord(LP_GPIO_HANDLER + 16,  EncMret());
+
+      LoadRomWord(LP_UART_HANDLER,       EncLoad(5'd13, 5'd7, LP_INTC_REG_CLAIM, 3'b010));
+      LoadRomWord(LP_UART_HANDLER + 4,   EncAddi(5'd11, 5'd13, 0));
+      LoadRomWord(LP_UART_HANDLER + 8,   EncLoad(5'd15, 5'd3, 12, 3'b010));
+      LoadRomWord(LP_UART_HANDLER + 12,  EncStore(5'd13, 5'd7, LP_INTC_REG_COMPLETE, 3'b010));
+      LoadRomWord(LP_UART_HANDLER + 16,  EncAddi(5'd10, 5'd10, 1));
+      LoadRomWord(LP_UART_HANDLER + 20,  EncMret());
+      ReleaseReset();
+
+      WaitForRetirePc(LP_MAIN_LOOP_PC, 240, "INTC table vector init loop");
+      @(negedge iClk);
+      iGpioIn[0] = 1'b1;
+      WaitForIdStagePc(LP_GPIO_HANDLER, 140, "INTC GPIO table-entry vector handler");
+      @(negedge iClk);
+      iGpioIn[0] = 1'b0;
+
+      for (WaitIdx = 0; WaitIdx < 300; WaitIdx = WaitIdx + 1) begin
+        @(posedge iClk);
+        if ((GetRfWord(10) == 32'h0000_0001) && (GetRfWord(12) == 32'h0000_0001)
+         && (dut.uRv32iCore.Pc == LP_MAIN_LOOP_PC)) begin
+          break;
+        end
+      end
+
+      CheckEq32(GetRfWord(10), 32'h0000_0001, "INTC vector GPIO handler count");
+      CheckEq32(GetRfWord(12), 32'h0000_0001, "INTC vector GPIO claim id");
+      CheckEq32(GetRfWord(31), 32'h0000_0000, "INTC vector bypassed common trap for GPIO");
+      CheckEq32(dut.uRv32iCore.uCsrFile.Mcause, LP_MCAUSE_MACHINE_EXT_INT, "INTC vector GPIO mcause");
+      CheckEq32(dut.uRv32iCore.uCsrFile.Mepc, LP_MAIN_LOOP_PC, "INTC vector GPIO mepc");
+
+      fork
+        SendUartByte(8'hC3);
+        WaitForIdStagePc(LP_UART_HANDLER, 500, "INTC UART table-entry vector handler");
+      join
+
+      for (WaitIdx = 0; WaitIdx < 400; WaitIdx = WaitIdx + 1) begin
+        @(posedge iClk);
+        if ((GetRfWord(10) == 32'h0000_0002) && (GetRfWord(11) == 32'h0000_0002)
+         && (GetRfWord(13) == 32'h0000_0002) && (dut.uRv32iCore.Pc == LP_MAIN_LOOP_PC)) begin
+          break;
+        end
+      end
+
+      CheckEq32(GetRfWord(10), 32'h0000_0002, "INTC vector handled GPIO and UART");
+      CheckEq32(GetRfWord(11), 32'h0000_0002, "INTC vector UART handler reached");
+      CheckEq32(GetRfWord(13), 32'h0000_0002, "INTC vector UART claim id");
+      CheckEq32(GetRfWord(15), 32'h0000_00C3, "INTC vector UART RXDATA pop");
+      CheckEq32(GetRfWord(31), 32'h0000_0000, "INTC vector bypassed common trap for UART");
+      CheckEq1(dut.uInterruptController.uIntcRegIf.oVectorEnable, 1'b1, "INTC vector enable register");
+      CheckEq32(dut.uInterruptController.uIntcRegIf.oVectorEntryFlat[31:0], 32'd0, "INTC vector entry0 remains reserved");
+      CheckEq32(dut.uInterruptController.uIntcRegIf.oVectorEntryFlat[63:32], LP_GPIO_HANDLER, "INTC vector entry1 GPIO handler");
+      CheckEq32(dut.uInterruptController.uIntcRegIf.oVectorEntryFlat[95:64], LP_UART_HANDLER, "INTC vector entry2 UART handler");
+      WaitCycles(4);
+      CheckEq1(dut.ExtIrqPending, 1'b0, "INTC vector IRQs cleared at interrupt controller");
+    end
+  endtask
+
   task automatic RunInterruptPriorityTest;
     int unsigned WaitIdx;
-    localparam logic [31:0] LP_PRIORITY_TRAP_VECTOR = 32'd864;
+    localparam logic [31:0] LP_PRIORITY_TRAP_VECTOR = 32'd128;
+    localparam logic [31:0] LP_PRIORITY_DELAY_START_PC = 32'd80;
+    localparam logic [31:0] LP_PRIORITY_MAIN_LOOP_PC = 32'd100;
     begin
       HoldResetAndClear();
       LoadRomWord(32'd4,   EncAddi(5'd1, 5'd0, LP_PRIORITY_TRAP_VECTOR));
@@ -1222,17 +1390,27 @@ module tb_TOP;
       LoadRomWord(32'd20,  EncLui(5'd7, LP_APB_INTC_BASE[31:12]));
       LoadRomWord(32'd24,  EncAddi(5'd4, 5'd0, 1));
       LoadRomWord(32'd28,  EncAddi(5'd8, 5'd0, 3));
-      LoadRomWord(32'd32,  EncStore(5'd4, 5'd3, 16, 3'b010));
-      LoadRomWord(32'd36,  EncStore(5'd4, 5'd6, 12, 3'b010));
-      LoadRomWord(32'd40,  EncStore(5'd8, 5'd7, 4, 3'b010));
-      LoadRomWord(32'd44,  EncLui(5'd5, 20'h00001));
-      LoadRomWord(32'd48,  EncAddi(5'd5, 5'd5, -2048));
-      LoadRomWord(32'd944, EncCsrReg(5'd0, 5'd5, LP_CSR_MIE, 3'b001));
-      LoadRomWord(32'd948, EncCsrImm(5'd0, 5'd8, LP_CSR_MSTATUS, 3'b101));
-      LoadRomWord(32'd952, 32'h0000_006F);
+      LoadRomWord(32'd32,  EncAddi(5'd9, 5'd0, 4));
+      LoadRomWord(32'd36,  EncAddi(5'd17, 5'd0, 7));
+      LoadRomWord(32'd40,  EncStore(5'd4, 5'd3, 16, 3'b010));
+      LoadRomWord(32'd44,  EncStore(5'd4, 5'd6, 12, 3'b010));
+      LoadRomWord(32'd48,  EncStore(5'd9, 5'd7, LP_INTC_REG_PRIORITY_GPIO, 3'b010));
+      LoadRomWord(32'd52,  EncStore(5'd8, 5'd7, LP_INTC_REG_PRIORITY_UART, 3'b010));
+      LoadRomWord(32'd56,  EncStore(5'd8, 5'd7, LP_INTC_REG_ENABLE, 3'b010));
+      LoadRomWord(32'd60,  EncStore(5'd17, 5'd7, LP_INTC_REG_THRESHOLD, 3'b010));
+      LoadRomWord(32'd64,  EncLui(5'd5, 20'h00001));
+      LoadRomWord(32'd68,  EncAddi(5'd5, 5'd5, -2048));
+      LoadRomWord(32'd72,  EncCsrReg(5'd0, 5'd5, LP_CSR_MIE, 3'b001));
+      LoadRomWord(32'd76,  EncCsrImm(5'd0, 5'd8, LP_CSR_MSTATUS, 3'b101));
+      LoadRomWord(32'd80,  EncAddi(5'd16, 5'd0, 220));
+      LoadRomWord(32'd84,  EncAddi(5'd16, 5'd16, -1));
+      LoadRomWord(32'd88,  EncBeq(5'd16, 5'd0, 8));
+      LoadRomWord(32'd92,  EncJal(5'd0, -8));
+      LoadRomWord(32'd96,  EncStore(5'd0, 5'd7, LP_INTC_REG_THRESHOLD, 3'b010));
+      LoadRomWord(LP_PRIORITY_MAIN_LOOP_PC, 32'h0000_006F);
 
       LoadRomWord(LP_PRIORITY_TRAP_VECTOR,       EncCsrImm(5'd0, 5'd8, LP_CSR_MSTATUS, 3'b111));
-      LoadRomWord(LP_PRIORITY_TRAP_VECTOR + 4,   EncLoad(5'd12, 5'd7, 8, 3'b010));
+      LoadRomWord(LP_PRIORITY_TRAP_VECTOR + 4,   EncLoad(5'd12, 5'd7, LP_INTC_REG_CLAIM, 3'b010));
       LoadRomWord(LP_PRIORITY_TRAP_VECTOR + 8,   EncBeq(5'd10, 5'd0, 8));
       LoadRomWord(LP_PRIORITY_TRAP_VECTOR + 12,  EncBeq(5'd0, 5'd0, 8));
       LoadRomWord(LP_PRIORITY_TRAP_VECTOR + 16,  EncAddi(5'd15, 5'd12, 0));
@@ -1242,23 +1420,28 @@ module tb_TOP;
       LoadRomWord(LP_PRIORITY_TRAP_VECTOR + 32,  EncBeq(5'd12, 5'd13, 24));
       LoadRomWord(LP_PRIORITY_TRAP_VECTOR + 36,  EncMret());
       LoadRomWord(LP_PRIORITY_TRAP_VECTOR + 40,  EncStore(5'd4, 5'd6, 20, 3'b010));
-      LoadRomWord(LP_PRIORITY_TRAP_VECTOR + 44,  EncStore(5'd13, 5'd7, 12, 3'b010));
+      LoadRomWord(LP_PRIORITY_TRAP_VECTOR + 44,  EncStore(5'd13, 5'd7, LP_INTC_REG_COMPLETE, 3'b010));
       LoadRomWord(LP_PRIORITY_TRAP_VECTOR + 48,  EncAddi(5'd10, 5'd10, 1));
       LoadRomWord(LP_PRIORITY_TRAP_VECTOR + 52,  EncMret());
       LoadRomWord(LP_PRIORITY_TRAP_VECTOR + 56,  EncLoad(5'd11, 5'd3, 12, 3'b010));
-      LoadRomWord(LP_PRIORITY_TRAP_VECTOR + 60,  EncStore(5'd13, 5'd7, 12, 3'b010));
+      LoadRomWord(LP_PRIORITY_TRAP_VECTOR + 60,  EncStore(5'd13, 5'd7, LP_INTC_REG_COMPLETE, 3'b010));
       LoadRomWord(LP_PRIORITY_TRAP_VECTOR + 64,  EncAddi(5'd10, 5'd10, 1));
       LoadRomWord(LP_PRIORITY_TRAP_VECTOR + 68,  EncMret());
       ReleaseReset();
 
-      WaitCycles(20);
-      SendUartByte(8'h5A);
-      @(negedge iClk);
-      iGpioIn[0] = 1'b1;
+      WaitForRetirePc(LP_PRIORITY_DELAY_START_PC, 220, "priority test threshold delay start");
+      fork
+        SendUartByte(8'h5A);
+        begin
+          @(negedge iClk);
+          iGpioIn[0] = 1'b1;
+        end
+      join
 
-      for (WaitIdx = 0; WaitIdx < 500; WaitIdx = WaitIdx + 1) begin
+      for (WaitIdx = 0; WaitIdx < 2000; WaitIdx = WaitIdx + 1) begin
         @(posedge iClk);
-        if ((GetRfWord(10) == 32'h0000_0002) && (GetRfWord(11) == 32'h0000_005A) && (dut.Pc == 32'd952)) begin
+        if ((GetRfWord(10) == 32'h0000_0002) && (GetRfWord(11) == 32'h0000_005A)
+         && (dut.uRv32iCore.Pc == LP_PRIORITY_MAIN_LOOP_PC)) begin
           break;
         end
       end
@@ -1282,31 +1465,33 @@ module tb_TOP;
       LoadRomWord(32'd12,  EncLui(5'd6, 20'h40001));
       LoadRomWord(32'd16,  EncLui(5'd7, LP_APB_INTC_BASE[31:12]));
       LoadRomWord(32'd20,  EncAddi(5'd4, 5'd0, 1));
-      LoadRomWord(32'd24,  EncStore(5'd4, 5'd6, 12, 3'b010));
-      LoadRomWord(32'd28,  EncStore(5'd4, 5'd7, 4, 3'b010));
-      LoadRomWord(32'd32,  EncLui(5'd5, 20'h00001));
-      LoadRomWord(32'd36,  EncAddi(5'd5, 5'd5, -2048));
-      LoadRomWord(32'd40,  EncCsrReg(5'd0, 5'd5, LP_CSR_MIE, 3'b001));
-      LoadRomWord(32'd44,  EncCsrImm(5'd0, 5'd8, LP_CSR_MSTATUS, 3'b101));
-      LoadRomWord(32'd48,  EncBeq(5'd10, 5'd4, 12));
-      LoadRomWord(32'd52,  EncJal(5'd0, -4));
-      LoadRomWord(32'd56,  LP_NOP_INSTR);
-      LoadRomWord(32'd60,  LP_NOP_INSTR);
+      LoadRomWord(32'd24,  EncAddi(5'd9, 5'd0, 3));
+      LoadRomWord(32'd28,  EncStore(5'd4, 5'd6, 12, 3'b010));
+      LoadRomWord(32'd32,  EncStore(5'd9, 5'd7, LP_INTC_REG_PRIORITY_GPIO, 3'b010));
+      LoadRomWord(32'd36,  EncStore(5'd4, 5'd7, LP_INTC_REG_ENABLE, 3'b010));
+      LoadRomWord(32'd40,  EncLui(5'd5, 20'h00001));
+      LoadRomWord(32'd44,  EncAddi(5'd5, 5'd5, -2048));
+      LoadRomWord(32'd48,  EncCsrReg(5'd0, 5'd5, LP_CSR_MIE, 3'b001));
+      LoadRomWord(32'd52,  EncCsrImm(5'd0, 5'd8, LP_CSR_MSTATUS, 3'b101));
+      LoadRomWord(32'd56,  EncBeq(5'd10, 5'd4, 12));
+      LoadRomWord(32'd60,  EncJal(5'd0, -4));
       LoadRomWord(32'd64,  LP_NOP_INSTR);
       LoadRomWord(32'd68,  LP_NOP_INSTR);
       LoadRomWord(32'd72,  LP_NOP_INSTR);
       LoadRomWord(32'd76,  LP_NOP_INSTR);
       LoadRomWord(32'd80,  LP_NOP_INSTR);
       LoadRomWord(32'd84,  LP_NOP_INSTR);
-      LoadRomWord(32'd88,  EncStore(5'd4, 5'd7, 12, 3'b010));
-      LoadRomWord(32'd92,  EncJal(5'd0, -44));
+      LoadRomWord(32'd88,  LP_NOP_INSTR);
+      LoadRomWord(32'd92,  LP_NOP_INSTR);
+      LoadRomWord(32'd96,  EncStore(5'd4, 5'd7, LP_INTC_REG_COMPLETE, 3'b010));
+      LoadRomWord(32'd100, EncJal(5'd0, -44));
 
-      LoadRomWord(LP_COMPLETE_TRAP_VECTOR,       EncLoad(5'd12, 5'd7, 8, 3'b010));
+      LoadRomWord(LP_COMPLETE_TRAP_VECTOR,       EncLoad(5'd12, 5'd7, LP_INTC_REG_CLAIM, 3'b010));
       LoadRomWord(LP_COMPLETE_TRAP_VECTOR + 4,   EncAddi(5'd10, 5'd10, 1));
       LoadRomWord(LP_COMPLETE_TRAP_VECTOR + 8,   EncMret());
       ReleaseReset();
 
-      WaitCycles(20);
+      WaitForRetirePc(32'd60, 220, "complete gate init loop");
       @(negedge iClk);
       iGpioIn[0] = 1'b1;
       WaitCycles(4);
@@ -1350,15 +1535,15 @@ module tb_TOP;
       LoadRomWord(LP_TRAP_VECTOR + 4,  EncMret());
       ReleaseReset();
 
-      WaitCycles(20);
+      WaitForRetirePc(32'd24, 120, "masked interrupt init loop");
       SendUartByte(8'h3C);
       WaitCycles(220);
 
       CheckEq32(GetRfWord(10), 32'h0000_0000, "masked interrupt ignored");
       CheckEq1(dut.UartIrq, 1'b1, "masked UART IRQ remains pending");
       CheckEq1(dut.ExtIrqPending, 1'b0, "interrupt controller mask blocks processor IRQ");
-      CheckEq32(dut.uCsrFile.Mcause, 32'h0000_0000, "masked interrupt no mcause update");
-      CheckEq32(dut.Pc, 32'd24, "masked interrupt stays in main loop");
+      CheckEq32(dut.uRv32iCore.uCsrFile.Mcause, 32'h0000_0000, "masked interrupt no mcause update");
+      CheckEq32(dut.uRv32iCore.Pc, 32'd24, "masked interrupt stays in main loop");
     end
   endtask
 

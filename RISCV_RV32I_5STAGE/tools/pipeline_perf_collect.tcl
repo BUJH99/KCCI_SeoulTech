@@ -28,6 +28,7 @@ riscv_timing_analysis::ensure_default route_directive "Explore"
 riscv_timing_analysis::ensure_default post_route_phys_opt_directive "AggressiveExplore"
 riscv_timing_analysis::ensure_default core_pblock_clock_region ""
 riscv_timing_analysis::ensure_default family_configs {}
+riscv_timing_analysis::ensure_default stage_boundary_configs {}
 riscv_timing_analysis::maybe_cd_repo_root
 riscv_timing_analysis::configure_max_threads
 
@@ -53,6 +54,15 @@ proc format_family_search_spec {family_config} {
   return "instance_patterns={[render_family_pattern_list $instance_patterns]} ref_name_patterns={[render_family_pattern_list $ref_name_patterns]} endpoint_patterns={[render_family_pattern_list $endpoint_patterns]} pin_name_patterns={[render_family_pattern_list $pin_name_patterns]}"
 }
 
+proc format_boundary_pin_search_spec {pin_spec default_pin_patterns} {
+  set instance_patterns [riscv_timing_analysis::dict_get_default $pin_spec instance_patterns {}]
+  set ref_name_patterns [riscv_timing_analysis::dict_get_default $pin_spec ref_name_patterns {}]
+  set endpoint_patterns [riscv_timing_analysis::dict_get_default $pin_spec endpoint_patterns {}]
+  set pin_name_patterns [riscv_timing_analysis::dict_get_default $pin_spec pin_name_patterns $default_pin_patterns]
+
+  return "instance_patterns={[render_family_pattern_list $instance_patterns]} ref_name_patterns={[render_family_pattern_list $ref_name_patterns]} endpoint_patterns={[render_family_pattern_list $endpoint_patterns]} pin_name_patterns={[render_family_pattern_list $pin_name_patterns]}"
+}
+
 proc write_family_timing_artifacts {output_dir family_config clk_period_ns} {
   set family_key [dict get $family_config key]
   set family_base [file join $output_dir "${family_key}_timing"]
@@ -73,6 +83,32 @@ proc write_family_timing_artifacts {output_dir family_config clk_period_ns} {
   puts " \[INFO\] Family `${family_key}` resolved [llength $to_pins] endpoint pin(s)."
   report_timing -delay_type max -to $to_pins -max_paths 20 -file $report_file
   riscv_timing_analysis::write_timing_paths_tsv $tsv_file 20 $clk_period_ns $to_pins
+}
+
+proc write_stage_boundary_timing_artifacts {output_dir boundary_config clk_period_ns} {
+  set boundary_key [dict get $boundary_config key]
+  set boundary_base [file join $output_dir "${boundary_key}_timing"]
+  set report_file "${boundary_base}_top20.rpt"
+  set tsv_file "${boundary_base}_paths.tsv"
+  set from_spec [riscv_timing_analysis::dict_get_default $boundary_config from {}]
+  set to_spec [riscv_timing_analysis::dict_get_default $boundary_config to {}]
+  set from_pins [riscv_timing_analysis::resolve_timing_pins_from_spec $from_spec [list C]]
+  set to_pins [riscv_timing_analysis::resolve_timing_pins_from_spec $to_spec [list D]]
+  set from_search_spec [format_boundary_pin_search_spec $from_spec [list C]]
+  set to_search_spec [format_boundary_pin_search_spec $to_spec [list D]]
+
+  if {[llength $from_pins] == 0 || [llength $to_pins] == 0} {
+    puts " \[WARN\] No true stage boundary timing path matched `${boundary_key}`. From ${from_search_spec}; to ${to_search_spec}"
+    set fh [open $report_file w]
+    puts $fh "No true stage boundary timing path matched `${boundary_key}`. From ${from_search_spec}; to ${to_search_spec}."
+    close $fh
+    riscv_timing_analysis::write_empty_timing_paths_tsv $tsv_file
+    return
+  }
+
+  puts " \[INFO\] Stage boundary `${boundary_key}` resolved [llength $from_pins] launch pin(s) and [llength $to_pins] capture pin(s)."
+  report_timing -delay_type max -from $from_pins -to $to_pins -max_paths 20 -file $report_file
+  riscv_timing_analysis::write_timing_paths_tsv $tsv_file 20 $clk_period_ns $to_pins $from_pins
 }
 
 proc apply_optional_core_pblock {core_pblock_clock_region} {
@@ -115,5 +151,8 @@ riscv_timing_analysis::write_clock_and_reset_constraints $::clock_port $::reset_
 report_stage_artifacts $::output_dir "post_route"
 foreach family_config $::family_configs {
   write_family_timing_artifacts $::output_dir $family_config $::clk_period_ns
+}
+foreach boundary_config $::stage_boundary_configs {
+  write_stage_boundary_timing_artifacts $::output_dir $boundary_config $::clk_period_ns
 }
 riscv_timing_analysis::emit_progress 5 $total_progress_steps "Completed routing and final timing reports"

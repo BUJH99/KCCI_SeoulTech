@@ -16,14 +16,14 @@ module IdExReg (
   input  logic               iFlush,
   input  logic               iHold,
   input  rv32i_pkg::IDEX_t   iData,
-  
+
   output rv32i_pkg::IDEX_t   oData
 );
 
   import rv32i_pkg::*;
 
   // ==== 1. Pipeline Register Storage ====
-  
+
   IDEX_t IDEXReg;
   IDEX_t IDEXRegNext;
 

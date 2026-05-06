@@ -1,0 +1,64 @@
+version: "1"
+project:
+  name: "SW_GPIO"
+hdl:
+  top: "Top"
+  src_globs:
+    - "src/**/*.v"
+    - "src/**/*.sv"
+  tb_globs:
+    - "tb/**/*.v"
+    - "tb/**/*.sv"
+  inc_globs:
+    - "include/**/*.vh"
+    - "include/**/*.svh"
+    - "inc/**/*.vh"
+    - "inc/**/*.svh"
+  xdc_globs:
+    - "constrs/**/*.xdc"
+  exclude_globs: []
+sim:
+  tool: "xsim"
+  timescale: "1ns/1ps"
+vivado:
+  part: "xc7a35tcpg236-1"
+  strategy: "Default"
+  power_limit_w: 2.5
+report:
+  enable: true
+  format: "html"
+vitis:
+  workspace: output/vitis/workspace
+  xsa:
+    path: output/vitis/xsa/${project.name}.xsa
+    bit_path: output/vivado/sw_gpio_buttons_bd_project/SW_GPIO_Basys3.runs/impl_1/sw_gpio_bd_wrapper.bit
+    bit_globs:
+      - output/vivado/**/*.runs/impl_1/*.bit
+      - output/*.bit
+    vivado_project: output/vivado/sw_gpio_buttons_bd_project/SW_GPIO_Basys3.xpr
+    impl_run: impl_1
+    include_bitstream: true
+    fixed: true
+    validate: true
+  platform:
+    name: ${project.name}
+    xpfm: output/vitis/workspace/${platform.name}/export/${platform.name}/${platform.name}.xpfm
+    os: standalone
+    cpu: microblaze_0
+    domain_name: standalone_microblaze_0
+  applications:
+    - name: hello_world
+      template: empty_application
+      domain: standalone_microblaze_0
+      sources:
+        - sw/apps/hello_world/src/**/*
+        - sw/common/src/**/*
+      includes:
+        - sw/apps/hello_world/include
+        - sw/common/include
+      target: hw
+  run:
+    mode: hardware
+    hw_server: ""
+    device_index: null
+    auto: false
