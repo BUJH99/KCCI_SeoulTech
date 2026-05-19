@@ -13,7 +13,7 @@ Summary:
 module ForwardUnit (
   input  rv32i_pkg::IDEX_t        iIDEX,
   input  rv32i_pkg::EXMEM_t       iEXMEM,
-  input  logic                    iWbWriteEn,
+  input  logic                    iWbWrEn,
   input  logic [4:0]              iWbRdAddr,
 
   output rv32i_pkg::ForwardSelE oRs1FwdSel,
@@ -47,11 +47,11 @@ module ForwardUnit (
                && (iIDEX.Rs2Addr != '0)
                && (iEXMEM.RdAddr == iIDEX.Rs2Addr);
 
-    MEMWBFwdRs1 = iWbWriteEn
+    MEMWBFwdRs1 = iWbWrEn
                && iIDEX.UseRs1
                && (iIDEX.Rs1Addr != '0)
                && (iWbRdAddr == iIDEX.Rs1Addr);
-    MEMWBFwdRs2 = iWbWriteEn
+    MEMWBFwdRs2 = iWbWrEn
                && iIDEX.UseRs2
                && (iIDEX.Rs2Addr != '0)
                && (iWbRdAddr == iIDEX.Rs2Addr);

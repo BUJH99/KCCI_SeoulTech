@@ -1,0 +1,175 @@
+project:
+  root: ../../..
+  top: TOP
+  part: xc7a35tcpg236-1
+  xdc:
+    - constrs/basys3_top.xdc
+  clock_period_ns: 40.0
+  strategy: Default
+
+variants:
+  - id: lutrom_direct
+    instr_mem_impl: distributed
+    latency: 0
+    prefetch_depth: 0
+  - id: bram_sync
+    instr_mem_impl: block
+    latency: 1
+    prefetch_depth: 0
+  - id: bram_prefetch2
+    instr_mem_impl: block
+    latency: 1
+    prefetch_depth: 2
+  - id: bram_prefetch4
+    instr_mem_impl: block
+    latency: 1
+    prefetch_depth: 4
+
+sizes_bytes:
+  - 4096
+  - 8192
+  - 16384
+
+timing_characterization_sizes_bytes:
+  - 4096
+  - 5120
+  - 6144
+  - 7168
+  - 8192
+  - 9216
+  - 10240
+  - 11264
+  - 12288
+  - 13312
+  - 14336
+  - 15360
+  - 16384
+  - 17408
+  - 18432
+  - 19456
+  - 20480
+  - 21504
+  - 22528
+  - 23552
+  - 24576
+  - 25600
+  - 26624
+  - 27648
+  - 28672
+  - 29696
+  - 30720
+  - 31744
+  - 32768
+full_sizes_bytes:
+  - 4096
+  - 5120
+  - 6144
+  - 7168
+  - 8192
+  - 9216
+  - 10240
+  - 11264
+  - 12288
+  - 13312
+  - 14336
+  - 15360
+  - 16384
+  - 17408
+  - 18432
+  - 19456
+  - 20480
+  - 21504
+  - 22528
+  - 23552
+  - 24576
+  - 25600
+  - 26624
+  - 27648
+  - 28672
+  - 29696
+  - 30720
+  - 31744
+  - 32768
+
+programs:
+  - ifetch_capacity_nop
+  - ifetch_capacity_prbs
+  - ifetch_capacity_toggle
+  - linear_sweep
+  - branch_loop
+  - mixed_firmware
+
+execution_regions:
+  - auto
+
+ifetch_build_modes:
+  - bootrom_only
+  - programram_only
+
+pure_capacity:
+  variants:
+    - lutrom_direct
+  sizes_bytes:
+    - 4096
+    - 5120
+    - 6144
+    - 7168
+    - 8192
+    - 9216
+    - 10240
+    - 11264
+    - 12288
+    - 13312
+    - 14336
+    - 15360
+    - 16384
+    - 17408
+    - 18432
+    - 19456
+    - 20480
+    - 21504
+    - 22528
+    - 23552
+    - 24576
+    - 25600
+    - 26624
+    - 27648
+    - 28672
+    - 29696
+    - 30720
+    - 31744
+    - 32768
+  programs:
+    - ifetch_capacity_nop
+    - ifetch_capacity_prbs
+  execution_regions:
+    - auto
+  ifetch_build_modes:
+    - bootrom_only
+    - programram_only
+
+fast:
+  variants:
+    - lutrom_direct
+    - bram_sync
+  sizes_bytes:
+    - 4096
+    - 8192
+    - 16384
+  programs:
+    - ifetch_capacity_nop
+    - ifetch_capacity_prbs
+    - mixed_firmware
+  execution_regions:
+    - auto
+  ifetch_build_modes:
+    - bootrom_only
+
+run:
+  vivado: true
+  xsim: true
+  jobs: 1
+  stop_on_fail: false
+  default_vivado_level: synth_only
+  target_retires: 512
+  max_cycles: 20000

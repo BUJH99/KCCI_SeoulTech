@@ -284,7 +284,7 @@
   <rect class="stage-bg" x="2250" y="26" width="380" height="272" rx="12" />
   <text class="ext-band-title" x="2440" y="54">Native data fabric</text>
   <rect class="ext-bus" x="2280" y="82" width="320" height="92" />
-  <text class="ext-txt" x="2440" y="112">DataBusMaster</text>
+  <text class="ext-txt" x="2440" y="112">DataBusInterconnect</text>
   <text class="ext-txt-sm" x="2440" y="139">routes MEM-stage native request</text>
   <text class="ext-txt-sm" x="2440" y="158">RAM window / APB window / decode fault</text>
   <rect class="ext-leaf" x="2305" y="202" width="135" height="54" />
@@ -295,14 +295,14 @@
   <text class="ext-txt-sm" x="2517.5" y="242">Mux</text>
 
   <rect class="stage-bg" x="2250" y="340" width="380" height="276" rx="12" />
-  <text class="ext-band-title" x="2440" y="368">Shared APB bridge</text>
+  <text class="ext-band-title" x="2440" y="368">AXI/APB bridge</text>
   <rect class="ext-bus" x="2280" y="398" width="320" height="92" />
-  <text class="ext-txt" x="2440" y="428">APBMASTER</text>
-  <text class="ext-txt-sm" x="2440" y="455">single outstanding MMIO access</text>
-  <text class="ext-txt-sm" x="2440" y="474">SETUP / ACCESS / response capture</text>
+  <text class="ext-txt" x="2440" y="428">AxiLiteToApbBridge</text>
+  <text class="ext-txt-sm" x="2440" y="455">AXI4-Lite slave to APB master</text>
+  <text class="ext-txt-sm" x="2440" y="474">SETUP / ACCESS / response mux</text>
   <rect class="ext-leaf" x="2305" y="522" width="125" height="54" />
-  <text class="ext-txt-sm" x="2367.5" y="543">APBCtrl</text>
-  <text class="ext-txt-sm" x="2367.5" y="562">phase FSM</text>
+  <text class="ext-txt-sm" x="2367.5" y="543">AXI Ctrl</text>
+  <text class="ext-txt-sm" x="2367.5" y="562">handshake FSM</text>
   <rect class="ext-leaf" x="2450" y="522" width="125" height="54" />
   <text class="ext-txt-sm" x="2512.5" y="543">APBMux</text>
   <text class="ext-txt-sm" x="2512.5" y="562">slave select</text>
@@ -431,10 +431,10 @@
 
   <rect class="ext-box" x="2250" y="888" width="380" height="204" />
   <text class="ext-txt-left" x="2274" y="918">Included external/wrapper modules</text>
-  <text class="ext-txt-left-sm" x="2274" y="946">TOP: DataBusMaster, DataRam, APBMASTER,</text>
-  <text class="ext-txt-left-sm" x="2274" y="970">APB_UART, APB_GPIO, InterruptController</text>
-  <text class="ext-txt-left-sm" x="2274" y="998">Bridge: DataBusRouter, DataBusRspMux,</text>
-  <text class="ext-txt-left-sm" x="2274" y="1022">APBCtrl, APBMux</text>
+  <text class="ext-txt-left-sm" x="2274" y="946">TOP: DataBusInterconnect, DataRam,</text>
+  <text class="ext-txt-left-sm" x="2274" y="970">DataBusAxiLiteMaster, AxiLiteToApbBridge,</text>
+  <text class="ext-txt-left-sm" x="2274" y="998">APB_UART, APB_GPIO, InterruptController</text>
+  <text class="ext-txt-left-sm" x="2274" y="1022">Bridge leaves: DataBusRouter, DataBusRspMux, APBMux</text>
   <text class="ext-txt-left-sm" x="2274" y="1050">Peripherals: UartRegs/Core leaves, GPIO regs/IRQ,</text>
   <text class="ext-txt-left-sm" x="2274" y="1074">INTC reg/pending/priority helpers</text>
 </g>

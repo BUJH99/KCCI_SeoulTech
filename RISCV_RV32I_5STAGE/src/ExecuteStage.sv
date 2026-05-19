@@ -13,9 +13,9 @@ Summary:
 module ExecuteStage (
   input  rv32i_pkg::IDEX_t        iIDEX,
   input  rv32i_pkg::EXMEM_t       iEXMEM,
-  input  logic                    iWbWriteEn,
+  input  logic                    iWbWrEn,
   input  logic [4:0]              iWbRdAddr,
-  input  logic [31:0]             iWbWriteData,
+  input  logic [31:0]             iWbWrData,
   input  logic [31:0]             iCsrRdata,
   input  logic [31:0]             iMepc,
   
@@ -23,7 +23,7 @@ module ExecuteStage (
   output logic [31:0]             oRedirectPc,
   output logic                    oTrapValid,
   output rv32i_pkg::TrapCauseE  oTrapCause,
-  output logic                    oCsrWriteEn,
+  output logic                    oCsrWrEn,
   output logic [11:0]             oCsrAddr,
   output logic [31:0]             oCsrWdata,
   output logic                    oMretValid,
@@ -56,7 +56,7 @@ module ExecuteStage (
   ForwardUnit uForwardUnit (
     .iIDEX          (iIDEX),
     .iEXMEM         (iEXMEM),
-    .iWbWriteEn     (iWbWriteEn),
+    .iWbWrEn     (iWbWrEn),
     .iWbRdAddr      (iWbRdAddr),
     .oRs1FwdSel     (ExRs1FwdSel),
     .oRs2FwdSel     (ExRs2FwdSel)
@@ -68,7 +68,7 @@ module ExecuteStage (
     .iRs1Data        (iIDEX.Rs1Data),
     .iRs2Data        (iIDEX.Rs2Data),
     .iExMemFwdData   (iEXMEM.ExFwdData),
-    .iMemWbWriteData (iWbWriteData),
+    .iMemWbWrData (iWbWrData),
     .iRs1FwdSel      (ExRs1FwdSel),
     .iRs2FwdSel      (ExRs2FwdSel),
     .oRs1Data        (Rs1Data),
@@ -93,7 +93,7 @@ module ExecuteStage (
   StoreDataMux uStoreDataMux (
     .iRs2Data        (iIDEX.Rs2Data),
     .iExMemFwdData   (iEXMEM.ExFwdData),
-    .iMemWbWriteData (iWbWriteData),
+    .iMemWbWrData (iWbWrData),
     .iRs2FwdSel      (ExRs2FwdSel),
     .oStoreData      (StoreData)
   );
@@ -163,7 +163,7 @@ module ExecuteStage (
     .iCsrAddr   (iIDEX.CsrAddr),
     .iSysOp     (iIDEX.Ctrl.SysOp),
     .oCsrActive (CsrActive),
-    .oCsrWriteEn(oCsrWriteEn),
+    .oCsrWrEn(oCsrWrEn),
     .oCsrAddr   (oCsrAddr),
     .oCsrWdata  (oCsrWdata),
     .oMretValid (oMretValid)

@@ -65,12 +65,12 @@
 
 | Evidence | Location |
 | --- | --- |
-| Artifact root | `C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\RISCV_RV32I_5STAGE\.analysis\pipeline_perf\programs\full_coverage` |
-| Single-cycle artifacts | `C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\RISCV_RV32I_5STAGE\.analysis\pipeline_perf\programs\full_coverage\single_cycle` |
-| 5-stage artifacts | `C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\RISCV_RV32I_5STAGE\.analysis\pipeline_perf\programs\full_coverage\pipeline` |
-| Instruction-focus artifacts | `C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\RISCV_RV32I_5STAGE\.analysis\pipeline_perf\programs\full_coverage\instruction_focus` |
-| Program memory | `C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\RISCV_RV32I_5STAGE\src\timing_programs\Full Coverage.mem` |
-| Instruction source | `C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\RISCV_RV32I_5STAGE\src\timing_programs\Full Coverage.s` |
+| Artifact root | `.analysis/pipeline_perf/programs/full_coverage` |
+| Single-cycle artifacts | `.analysis/pipeline_perf/programs/full_coverage/single_cycle` |
+| 5-stage artifacts | `.analysis/pipeline_perf/programs/full_coverage/pipeline` |
+| Instruction-focus artifacts | `.analysis/pipeline_perf/programs/full_coverage/instruction_focus` |
+| Program memory | `src/timing_programs/Full Coverage.mem` |
+| Instruction source | `src/timing_programs/Full Coverage.s` |
 
 <details>
 <summary>Compact timing evidence</summary>
@@ -174,12 +174,12 @@
 
 | Evidence | Location |
 | --- | --- |
-| Artifact root | `C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\RISCV_RV32I_5STAGE\.analysis\pipeline_perf\programs\bubble_sort` |
-| Single-cycle artifacts | `C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\RISCV_RV32I_5STAGE\.analysis\pipeline_perf\programs\bubble_sort\single_cycle` |
-| 5-stage artifacts | `C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\RISCV_RV32I_5STAGE\.analysis\pipeline_perf\programs\bubble_sort\pipeline` |
-| Instruction-focus artifacts | `C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\RISCV_RV32I_5STAGE\.analysis\pipeline_perf\programs\bubble_sort\instruction_focus` |
-| Program memory | `C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\RISCV_RV32I_5STAGE\src\timing_programs\Bubble Sort.mem` |
-| Instruction source | `C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\RISCV_RV32I_5STAGE\src\timing_programs\Bubble Sort.s` |
+| Artifact root | `.analysis/pipeline_perf/programs/bubble_sort` |
+| Single-cycle artifacts | `.analysis/pipeline_perf/programs/bubble_sort/single_cycle` |
+| 5-stage artifacts | `.analysis/pipeline_perf/programs/bubble_sort/pipeline` |
+| Instruction-focus artifacts | `.analysis/pipeline_perf/programs/bubble_sort/instruction_focus` |
+| Program memory | `src/timing_programs/Bubble Sort.mem` |
+| Instruction source | `src/timing_programs/Bubble Sort.s` |
 
 <details>
 <summary>Compact timing evidence</summary>

@@ -15,8 +15,8 @@ module SlaveFndController #(
   parameter int unsigned P_CLK_HZ = 100_000_000
 ) (
   input  logic        iClk,
-  input  logic        iRstn,
-  input  logic [15:0] iSelectedCount,
+  input  logic        iRst,
+  input  logic [15:0] iSelCnt,
   input  logic [7:0]  iBrightness,
 
   output logic [6:0]  oSeg,
@@ -24,13 +24,11 @@ module SlaveFndController #(
   output logic [3:0]  oDigitSel
 );
 
-  logic       Rst;
   logic       Tick1kHz;
   logic       Tick2Hz;
   logic [3:0] BlinkMask;
   logic [3:0] DpMask;
 
-  assign Rst       = !iRstn;
   assign BlinkMask = (iBrightness == 8'd0) ? 4'hF : 4'h0;
   assign DpMask    = 4'h0;
 
@@ -38,17 +36,17 @@ module SlaveFndController #(
     .P_CLK_HZ(P_CLK_HZ)
   ) uFndTickGen (
     .iClk      (iClk),
-    .iRstn     (iRstn),
+    .iRst      (iRst),
     .oTick1kHz (Tick1kHz),
     .oTick2Hz  (Tick2Hz)
   );
 
   FndController uFndController (
     .iClk       (iClk),
-    .iRst       (Rst),
+    .iRst       (iRst),
     .iTick1kHz  (Tick1kHz),
     .iTick2Hz   (Tick2Hz),
-    .iDigitsBcd (iSelectedCount),
+    .iDigitsBcd (iSelCnt),
     .iBlinkMask (BlinkMask),
     .iDpMask    (DpMask),
     .oSeg       (oSeg),

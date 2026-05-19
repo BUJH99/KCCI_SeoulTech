@@ -12,7 +12,7 @@ Summary:
 
 module APBCtrl (
   input  logic        iClk,
-  input  logic        iRstn,
+  input  logic        iRst,
   input  logic        iApbSel,
   input  logic        iPwrite,
   input  logic [31:0] iPaddr,
@@ -35,69 +35,79 @@ module APBCtrl (
 );
 
   typedef enum logic [1:0] {
-    LP_APB_STATE_IDLE,
-    LP_APB_STATE_SETUP,
-    LP_APB_STATE_ACCESS
-  } apb_state_e;
+    IDLE,
+    SETUP,
+    ACCESS
+  } state_e;
 
-  apb_state_e ApbState;
-  apb_state_e ApbState_d;
+  state_e state;
+  state_e state_d;
 
-  logic        ReqWrite;
+  logic        ReqWr;
   logic [31:0] ReqAddr;
   logic [3:0]  ReqStrb;
   logic [31:0] ReqWdata;
   logic [31:0] RspPrdata;
   logic        RspPslverr;
 
-  assign oReqAddr        = ReqAddr;
-  assign oApbPhaseActive = (ApbState != LP_APB_STATE_IDLE);
-  assign oPwrite         = ReqWrite;
-  assign oPaddr          = ReqAddr[11:0];
-  assign oPstrb          = ReqStrb;
-  assign oPwdata         = ReqWdata;
-  assign oPenable        = (ApbState == LP_APB_STATE_ACCESS);
-
   always_comb begin
-    ApbState_d = ApbState;
+    state_d = state;
 
-    unique case (ApbState)
-      LP_APB_STATE_IDLE: begin
+    unique case (state)
+      IDLE: begin
         if (iApbSel) begin
-          ApbState_d = LP_APB_STATE_SETUP;
+          state_d = SETUP;
         end
       end
 
-      LP_APB_STATE_SETUP: begin
-        ApbState_d = LP_APB_STATE_ACCESS;
+      SETUP: begin
+        state_d = ACCESS;
       end
 
-      LP_APB_STATE_ACCESS: begin
+      ACCESS: begin
         if (iAccessComplete) begin
-          ApbState_d = LP_APB_STATE_IDLE;
+          state_d = IDLE;
         end
       end
 
       default: begin
-        ApbState_d = LP_APB_STATE_IDLE;
+        state_d = IDLE;
       end
     endcase
   end
 
-  always_ff @(posedge iClk or negedge iRstn) begin
-    if (!iRstn) begin
-      ApbState   <= LP_APB_STATE_IDLE;
-      ReqWrite   <= 1'b0;
+  always_comb begin
+    oReqAddr        = ReqAddr;
+    oApbPhaseActive = (state != IDLE);
+    oPwrite         = ReqWr;
+    oPaddr          = ReqAddr[11:0];
+    oPstrb          = ReqStrb;
+    oPwdata         = ReqWdata;
+    oPenable        = (state == ACCESS);
+    oRspReady       = iAccessComplete;
+    oPrdata         = RspPrdata;
+    oPslverr        = RspPslverr;
+
+    if (iAccessComplete) begin
+      oPrdata  = iCompletionPrdata;
+      oPslverr = iCompletionPslverr;
+    end
+  end
+
+  always_ff @(posedge iClk or posedge iRst) begin
+    if (iRst) begin
+      state      <= IDLE;
+      ReqWr   <= 1'b0;
       ReqAddr    <= '0;
       ReqStrb    <= '0;
       ReqWdata   <= '0;
       RspPrdata  <= '0;
       RspPslverr <= 1'b0;
     end else begin
-      ApbState <= ApbState_d;
+      state <= state_d;
 
-      if ((ApbState == LP_APB_STATE_IDLE) && iApbSel) begin
-        ReqWrite <= iPwrite;
+      if ((state == IDLE) && iApbSel) begin
+        ReqWr <= iPwrite;
         ReqAddr  <= iPaddr;
         ReqStrb  <= iPstrb;
         ReqWdata <= iPwdata;
@@ -109,9 +119,5 @@ module APBCtrl (
       end
     end
   end
-
-  assign oRspReady = iAccessComplete;
-  assign oPrdata   = iAccessComplete ? iCompletionPrdata : RspPrdata;
-  assign oPslverr  = iAccessComplete ? iCompletionPslverr : RspPslverr;
 
 endmodule

@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="1120" viewBox="0 0 1280 1120" role="img" aria-labelledby="title desc">
+  <title id="title">SW Application Sequence Diagram for Bubble Sort Demo</title>
+  <desc id="desc">Black and white academic sequence diagram showing boot initialization, interrupt dispatch, timer-driven application loop, bubble sort step, and peripheral updates through HAL and MMIO drivers.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#111"/>
+    </marker>
+    <marker id="openArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#111" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <style><![CDATA[
+      .bg { fill: #fff; }
+      .title { font-family: "Times New Roman", Times, serif; font-size: 25px; font-weight: 600; fill: #111; }
+      .subtitle { font-family: "Times New Roman", Times, serif; font-size: 15px; font-style: italic; fill: #333; }
+      .lane-title { font-family: Arial, Helvetica, sans-serif; font-size: 17px; fill: #111; font-weight: bold; }
+      .lane-sub { font-family: "Times New Roman", Times, serif; font-size: 13px; font-style: italic; fill: #555; }
+      
+      /* KEY IMPROVEMENT: Added paint-order and white stroke to text to prevent overlap illegibility with lines */
+      .label { 
+        font-family: "Times New Roman", Times, serif; 
+        font-size: 15px; 
+        font-style: italic; 
+        fill: #111; 
+        stroke: #fff;
+        stroke-width: 4px;
+        stroke-linejoin: round;
+        paint-order: stroke fill;
+      }
+      
+      .small { font-family: Arial, Helvetica, sans-serif; font-size: 12px; fill: #111; }
+      .tiny { font-family: Arial, Helvetica, sans-serif; font-size: 11.5px; fill: #444; }
+      .lifeline { stroke: #111; stroke-width: 1.2; stroke-dasharray: 6 5; }
+      .axis { stroke: #111; stroke-width: 1.5; }
+      .msg { stroke: #111; stroke-width: 1.5; fill: none; marker-end: url(#arrow); }
+      .ret { stroke: #111; stroke-width: 1.2; stroke-dasharray: 5 4; fill: none; marker-end: url(#openArrow); }
+      .note-line { stroke: #111; stroke-width: 1.1; fill: none; }
+      .activation { fill: #f0f0f0; stroke: #111; stroke-width: 1.1; }
+      .phase { fill: #fff; stroke: #111; stroke-width: 1.2; stroke-dasharray: 4 4; }
+      .phase-text { font-family: Arial, Helvetica, sans-serif; font-size: 13px; font-weight: bold; letter-spacing: .08em; fill: #111; }
+      .brace { fill: none; stroke: #111; stroke-width: 3; stroke-linecap: round; }
+    ]]></style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1280" height="1120"/>
+  
+  <text class="title" x="640" y="42" text-anchor="middle">Figure. SW Application Sequence for Bubble Sort Demo</text>
+  <text class="subtitle" x="640" y="66" text-anchor="middle">Application FSM, trap handler, HAL/MMIO driver, and peripheral interaction</text>
+
+  <!-- Column headers -->
+  <g id="headers">
+    <text class="lane-title" x="90" y="104" text-anchor="middle">Input Source</text>
+    <text class="lane-sub" x="90" y="123" text-anchor="middle">UART / GPIO / Timer</text>
+
+    <text class="lane-title" x="300" y="104" text-anchor="middle">Trap &amp; Main</text>
+    <text class="lane-sub" x="300" y="123" text-anchor="middle">trap_handler(), while(1)</text>
+
+    <text class="lane-title" x="520" y="104" text-anchor="middle">Application</text>
+    <text class="lane-sub" x="520" y="123" text-anchor="middle">demo_state_t / sort FSM</text>
+
+    <text class="lane-title" x="745" y="104" text-anchor="middle">HAL / Driver</text>
+    <text class="lane-sub" x="745" y="123" text-anchor="middle">MMIO access functions</text>
+
+    <text class="lane-title" x="975" y="104" text-anchor="middle">SoC Peripherals</text>
+    <text class="lane-sub" x="975" y="123" text-anchor="middle">TIMER / INTC / UART / GPIO / FND</text>
+
+    <text class="lane-title" x="1170" y="104" text-anchor="middle">External Slave</text>
+    <text class="lane-sub" x="1170" y="123" text-anchor="middle">SPI trace / I2C display</text>
+  </g>
+
+  <!-- Lifelines -->
+  <line class="lifeline" x1="90" y1="138" x2="90" y2="1050"/>
+  <line class="lifeline" x1="300" y1="138" x2="300" y2="1050"/>
+  <line class="lifeline" x1="520" y1="138" x2="520" y2="1050"/>
+  <line class="lifeline" x1="745" y1="138" x2="745" y2="1050"/>
+  <line class="lifeline" x1="975" y1="138" x2="975" y2="1050"/>
+  <line class="lifeline" x1="1170" y1="138" x2="1170" y2="1050"/>
+
+  <!-- Phase labels -->
+  <rect class="phase" x="35" y="150" width="1195" height="34" rx="4"/>
+  <text class="phase-text" x="50" y="172">BOOT INITIALIZATION</text>
+
+  <rect class="phase" x="35" y="394" width="1195" height="34" rx="4"/>
+  <text class="phase-text" x="50" y="416">RUNTIME EVENT DISPATCH</text>
+
+  <rect class="phase" x="35" y="670" width="1195" height="34" rx="4"/>
+  <text class="phase-text" x="50" y="692">SORT STEP UPDATE</text>
+
+  <!-- Activation bars -->
+  <rect class="activation" x="292" y="202" width="16" height="828"/>
+  <rect class="activation" x="512" y="202" width="16" height="830"/>
+  <rect class="activation" x="737" y="238" width="16" height="748"/>
+  <rect class="activation" x="967" y="274" width="16" height="712"/>
+  <rect class="activation" x="1162" y="790" width="16" height="124"/>
+
+  <!-- Boot sequence -->
+  <path class="msg" d="M 300 210 L 520 210"/>
+  <text class="label" x="410" y="200" text-anchor="middle">demo_reset()</text>
+
+  <path class="msg" d="M 520 246 L 745 246"/>
+  <text class="label" x="632" y="236" text-anchor="middle">fnd_show_hex16()</text>
+
+  <path class="msg" d="M 745 282 L 975 282"/>
+  <text class="label" x="860" y="272" text-anchor="middle">MMIO write: FND registers</text>
+
+  <path class="msg" d="M 300 318 L 745 318"/>
+  <text class="label" x="522" y="308" text-anchor="middle">timer_init_100hz(), trap_enable(), peripheral_init(), intc_init()</text>
+
+  <path class="msg" d="M 745 354 L 975 354"/>
+  <text class="label" x="860" y="344" text-anchor="middle">program TIMER, GPIO IRQ, SPI/I2C, INTC</text>
+
+  <!-- Runtime external IRQ/event sequence -->
+  <path class="msg" d="M 90 450 L 300 450"/>
+  <text class="label" x="195" y="440" text-anchor="middle">UART char / GPIO button / timer tick</text>
+
+  <path class="msg" d="M 975 486 L 300 486"/>
+  <text class="label" x="638" y="476" text-anchor="middle">machine interrupt enters trap_handler()</text>
+
+  <path class="msg" d="M 300 522 L 975 522"/>
+  <text class="label" x="638" y="512" text-anchor="middle">MEIP: service_claim() reads INTC_CLAIM</text>
+
+  <path class="ret" d="M 975 558 L 300 558"/>
+  <text class="label" x="638" y="548" text-anchor="middle">source id returned, service_uart() / service_gpio() / service_spi() / service_i2c()</text>
+
+  <path class="msg" d="M 300 594 L 520 594"/>
+  <text class="label" x="410" y="584" text-anchor="middle">update app command: load / start / pause / step / reset</text>
+
+  <path class="ret" d="M 520 630 L 300 630"/>
+  <text class="label" x="410" y="620" text-anchor="middle">state changed: IDLE, LOADED, SORTING, DONE</text>
+
+  <!-- Timer pending path -->
+  <path class="msg" d="M 975 726 L 300 726"/>
+  <text class="label" x="638" y="716" text-anchor="middle">MTIP: TIMER_STATUS clear, g_ticks++, g_timer_tick_pending = true</text>
+
+  <path class="msg" d="M 300 762 L 520 762"/>
+  <text class="label" x="410" y="752" text-anchor="middle">while(1): demo_sort_tick()</text>
+
+  <path class="msg" d="M 975 798 L 1170 798"/>
+  <text class="label" x="1072" y="788" text-anchor="middle">I2C display-mode register write</text>
+
+  <path class="msg" d="M 520 820 L 520 820 c 55 0 55 30 0 30"/>
+  <text class="label" x="545" y="839" text-anchor="start">demo_sort_step(): compare, optional swap, pass/done check</text>
+
+  <path class="msg" d="M 975 868 L 1170 868"/>
+  <text class="label" x="1072" y="858" text-anchor="middle">SPI trace frame</text>
+
+  <path class="ret" d="M 1170 904 L 975 904"/>
+  <text class="label" x="1072" y="894" text-anchor="middle">done / error status</text>
+
+  <path class="msg" d="M 520 940 L 745 940"/>
+  <text class="label" x="632" y="930" text-anchor="middle">demo_show_array(), spi_send_trace(), slave_set_display_mode()</text>
+
+  <path class="msg" d="M 745 976 L 975 976"/>
+  <text class="label" x="860" y="966" text-anchor="middle">MMIO write/read: FND, SPI, I2C, UART</text>
+
+  <path class="msg" d="M 520 1020 L 90 1020"/>
+  <text class="label" x="305" y="1010" text-anchor="middle">DONE: sorted array printed over UART, FND shows final result</text>
+
+  <!-- Loop bracket -->
+  <path class="brace" d="M 1238 726 C 1255 726 1255 726 1255 746 L 1255 956 C 1255 976 1255 976 1238 976"/>
+  <text class="small" x="1218" y="843" text-anchor="middle">Main Loop</text>
+  <text class="small" x="1218" y="859" text-anchor="middle">Running</text>
+
+</svg>

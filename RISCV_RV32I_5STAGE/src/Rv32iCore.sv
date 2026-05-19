@@ -12,10 +12,11 @@ Summary:
 
 module Rv32iCore (
   input  logic                       iClk,
-  input  logic                       iRstn,
+  input  logic                       iRst,
   input  rv32i_pkg::InstrBusRsp_t    iInstrBusRsp,
   input  rv32i_pkg::DataBusRsp_t     iDataBusRsp,
   input  logic                       iExtIrqPending,
+  input  logic                       iTimerIrqPending,
   input  logic                       iIntcVectorValid,
   input  logic [31:0]                iIntcVectorPc,
 
@@ -80,20 +81,22 @@ module Rv32iCore (
 
   logic        FetchValid;
   logic        FetchValidCore;
+  logic        FetchReqValid;
+  logic        InstrFetchStall;
   logic        RetireValid;
   logic [31:0] RetirePc;
   logic [4:0]  RetireRdAddr;
   logic [31:0] RetireWrData;
-  logic        RetireRegWrite;
+  logic        RetireRegWr;
   logic        PipelineEmpty;
-  logic        WbWriteEn;
-  logic [31:0] WbWriteData;
-  logic        ExWbWriteEn;
+  logic        WbWrEn;
+  logic [31:0] WbWrData;
+  logic        ExWbWrEn;
   logic [4:0]  ExWbRdAddr;
-  logic [31:0] ExWbWriteData;
+  logic [31:0] ExWbWrData;
   logic        ExWbFwdEn;
   logic [4:0]  ExWbFwdRdAddr;
-  logic [31:0] ExWbFwdWriteData;
+  logic [31:0] ExWbFwdWrData;
 
   logic        MemApbStall;
 
@@ -103,8 +106,10 @@ module Rv32iCore (
   logic        MstatusMie;
   logic        MstatusMpie;
   logic        MieMeie;
+  logic        MieMtie;
   logic        MipMeip;
-  logic        ExCsrWriteEn;
+  logic        MipMtip;
+  logic        ExCsrWrEn;
   logic [11:0] ExCsrAddr;
   logic [31:0] ExCsrWdata;
   logic        ExMretValid;
@@ -115,9 +120,9 @@ module Rv32iCore (
   logic [31:0] TrapEnterCause;
   logic        TrapFromEx;
   logic        TrapFromMem;
-  logic        TrapFromInterrupt;
-  logic        InterruptAccepted;
-  logic        InterruptAcceptedCore;
+  logic        TrapFromIrq;
+  logic        IrqAccepted;
+  logic        IrqAcceptedCore;
 
   (* DONT_TOUCH = "TRUE", KEEP = "TRUE" *) logic TimingSinkReg;
 
@@ -128,8 +133,9 @@ module Rv32iCore (
 
   FetchStage uFetchStage (
     .iClk               (iClk),
-    .iRstn              (iRstn),
+    .iRst              (iRst),
     .iPcWe              (PcWe),
+    .iFetchReqValid     (FetchReqValid),
     .iFetchValid        (FetchValid),
     .iTrapRedirectValid (TrapRedirectValid),
     .iTrapRedirectPc    (TrapRedirectPc),
@@ -145,7 +151,7 @@ module Rv32iCore (
 
   IfIdReg uIfIdReg (
     .iClk   (iClk),
-    .iRstn  (iRstn),
+    .iRst  (iRst),
     .iFlush (IFIDFlush),
     .iHold  (IFIDHold),
     .iData  (IFIDNext),
@@ -154,12 +160,12 @@ module Rv32iCore (
 
   DecodeStage uDecodeStage (
     .iClk          (iClk),
-    .iRstn         (iRstn),
+    .iRst         (iRst),
     .iIFID         (IFID),
     .iIDEX         (IDEX),
-    .iWbWriteEn    (WbWriteEn),
+    .iWbWrEn    (WbWrEn),
     .iWbRdAddr     (MEMWB.RdAddr),
-    .iWbWriteData  (WbWriteData),
+    .iWbWrData  (WbWrData),
     .oLoadUseStall (LoadUseStall),
     .oRedirectValid(IdRedirectValid),
     .oRedirectPc   (IdRedirectPc),
@@ -170,7 +176,7 @@ module Rv32iCore (
 
   IdExReg uIdExReg (
     .iClk   (iClk),
-    .iRstn  (iRstn),
+    .iRst  (iRst),
     .iFlush (IDEXFlush),
     .iHold  (IDEXHold),
     .iData  (IDEXNext),
@@ -180,16 +186,16 @@ module Rv32iCore (
   ExecuteStage uExecuteStage (
     .iIDEX        (IDEX),
     .iEXMEM       (EXMEM),
-    .iWbWriteEn   (ExWbFwdEn),
+    .iWbWrEn   (ExWbFwdEn),
     .iWbRdAddr    (ExWbFwdRdAddr),
-    .iWbWriteData (ExWbFwdWriteData),
+    .iWbWrData (ExWbFwdWrData),
     .iCsrRdata    (CsrRdata),
     .iMepc        (Mepc),
     .oRedirectValid(ExRedirectValid),
     .oRedirectPc  (ExRedirectPc),
     .oTrapValid   (ExTrapValid),
     .oTrapCause   (ExTrapCause),
-    .oCsrWriteEn  (ExCsrWriteEn),
+    .oCsrWrEn  (ExCsrWrEn),
     .oCsrAddr     (ExCsrAddr),
     .oCsrWdata    (ExCsrWdata),
     .oMretValid   (ExMretValid),
@@ -198,7 +204,7 @@ module Rv32iCore (
 
   ExMemReg uExMemReg (
     .iClk   (iClk),
-    .iRstn  (iRstn),
+    .iRst  (iRst),
     .iFlush (EXMEMFlush),
     .iHold  (EXMEMHold),
     .iData  (EXMEMNext),
@@ -216,20 +222,20 @@ module Rv32iCore (
 
   MemWbReg uMemWbReg (
     .iClk  (iClk),
-    .iRstn (iRstn),
+    .iRst (iRst),
     .iData (MEMWBNext),
     .oData (MEMWB)
   );
 
   WriteBackStage uWriteBackStage (
     .iMEMWB          (MEMWB),
-    .oWbWriteData    (WbWriteData),
-    .oWbWriteEn      (WbWriteEn),
+    .oWbWrData    (WbWrData),
+    .oWbWrEn      (WbWrEn),
     .oRetireValid    (RetireValid),
     .oRetirePc       (RetirePc),
     .oRetireRdAddr   (RetireRdAddr),
     .oRetireWrData   (RetireWrData),
-    .oRetireRegWrite (RetireRegWrite)
+    .oRetireRegWr (RetireRegWr)
   );
 
   TrapController uTrapController (
@@ -246,6 +252,8 @@ module Rv32iCore (
     .iMstatusMie        (MstatusMie),
     .iMieMeie           (MieMeie),
     .iMipMeip           (MipMeip),
+    .iMieMtie           (MieMtie),
+    .iMipMtip           (MipMtip),
     .iMtvec             (Mtvec),
     .iIntcVectorValid   (iIntcVectorValid),
     .iIntcVectorPc      (iIntcVectorPc),
@@ -254,10 +262,10 @@ module Rv32iCore (
     .oTrapEnterCause    (TrapEnterCause),
     .oTrapFromEx        (TrapFromEx),
     .oTrapFromMem       (TrapFromMem),
-    .oTrapFromInterrupt (TrapFromInterrupt),
+    .oTrapFromIrq (TrapFromIrq),
     .oTrapRedirectValid (TrapRedirectValidCore),
     .oTrapRedirectPc    (TrapRedirectPc),
-    .oInterruptAccepted (InterruptAcceptedCore)
+    .oIrqAccepted (IrqAcceptedCore)
   );
 
   PipeFlowCtrl uPipeFlowCtrl (
@@ -265,7 +273,7 @@ module Rv32iCore (
     .iTrapCaptureValid (TrapEnterValid),
     .iTrapFromEx       (TrapFromEx),
     .iTrapFromMem      (TrapFromMem),
-    .iTrapFromInterrupt(TrapFromInterrupt),
+    .iTrapFromIrq(TrapFromIrq),
     .iIdRedirectValid  (IdRedirectValidCtrl),
     .iExRedirectValid  (ExRedirectValidCtrl),
     .iIFIDValid        (IFID.Valid),
@@ -285,64 +293,69 @@ module Rv32iCore (
   );
 
   assign MemApbStall         = DataBusReq.ReqValid && !DataBusRsp.RspReady;
+  assign FetchReqValid       = FetchValidCore && !MemApbStall;
+  assign InstrFetchStall     = FetchReqValid && !InstrBusRsp.RspReady;
   assign TrapEnterValid      = TrapEnterValidCore && !MemApbStall;
   assign TrapRedirectValid   = TrapRedirectValidCore && !MemApbStall;
-  assign InterruptAccepted   = InterruptAcceptedCore && !MemApbStall;
+  assign IrqAccepted   = IrqAcceptedCore && !MemApbStall;
   assign IdTrapValidCtrl     = IdTrapValid && !MemApbStall;
   assign ExTrapValidCtrl     = ExTrapValid && !MemApbStall;
   assign IdRedirectValidCtrl = IdRedirectValid && !MemApbStall;
   assign ExRedirectValidCtrl = ExRedirectValid && !MemApbStall;
-  assign PcWe                = PcWeCore && !MemApbStall;
+  assign PcWe                = PcWeCore && !MemApbStall && !InstrFetchStall;
   assign IFIDHold            = IFIDHoldCore || MemApbStall;
   assign IFIDFlush           = IFIDFlushCore && !MemApbStall;
   assign IDEXHold            = MemApbStall;
   assign IDEXFlush           = IDEXFlushCore && !MemApbStall;
   assign EXMEMHold           = MemApbStall;
   assign EXMEMFlush          = EXMEMFlushCore && !MemApbStall;
-  assign FetchValid          = FetchValidCore && !MemApbStall;
+  assign FetchValid          = FetchReqValid && !InstrFetchStall;
   assign ExMretValidCtrl     = ExMretValid && !MemApbStall;
-  assign ExWbFwdEn           = WbWriteEn || ExWbWriteEn;
-  assign ExWbFwdRdAddr       = WbWriteEn ? MEMWB.RdAddr : ExWbRdAddr;
-  assign ExWbFwdWriteData    = WbWriteEn ? WbWriteData : ExWbWriteData;
+  assign ExWbFwdEn           = WbWrEn || ExWbWrEn;
+  assign ExWbFwdRdAddr       = WbWrEn ? MEMWB.RdAddr : ExWbRdAddr;
+  assign ExWbFwdWrData    = WbWrEn ? WbWrData : ExWbWrData;
 
-  always_ff @(posedge iClk or negedge iRstn) begin
-    if (!iRstn) begin
-      ExWbWriteEn   <= 1'b0;
+  always_ff @(posedge iClk or posedge iRst) begin
+    if (iRst) begin
+      ExWbWrEn   <= 1'b0;
       ExWbRdAddr    <= '0;
-      ExWbWriteData <= '0;
-    end else if (WbWriteEn) begin
-      ExWbWriteEn   <= 1'b1;
+      ExWbWrData <= '0;
+    end else if (WbWrEn) begin
+      ExWbWrEn   <= 1'b1;
       ExWbRdAddr    <= MEMWB.RdAddr;
-      ExWbWriteData <= WbWriteData;
+      ExWbWrData <= WbWrData;
     end
   end
 
   CsrFile uCsrFile (
     .iClk           (iClk),
-    .iRstn          (iRstn),
+    .iRst          (iRst),
     .iCsrAddr       (IDEX.CsrAddr),
-    .iCsrWriteEn    (ExCsrWriteEn && !MemTrapValid && !MemApbStall),
-    .iCsrWriteAddr  (ExCsrAddr),
-    .iCsrWriteData  (ExCsrWdata),
+    .iCsrWrEn    (ExCsrWrEn && !MemTrapValid && !MemApbStall),
+    .iCsrWrAddr  (ExCsrAddr),
+    .iCsrWrData  (ExCsrWdata),
     .iMretValid     (ExMretValidCtrl && !MemTrapValid),
     .iTrapEnterValid(TrapEnterValid),
     .iTrapEnterEpc  (TrapEnterEpc),
     .iTrapEnterCause(TrapEnterCause),
     .iExtIrqPending (iExtIrqPending),
+    .iTimerIrqPending(iTimerIrqPending),
     .oCsrRdata      (CsrRdata),
     .oMtvec         (Mtvec),
     .oMepc          (Mepc),
     .oMstatusMie    (MstatusMie),
     .oMstatusMpie   (MstatusMpie),
     .oMieMeie       (MieMeie),
-    .oMipMeip       (MipMeip)
+    .oMieMtie       (MieMtie),
+    .oMipMeip       (MipMeip),
+    .oMipMtip       (MipMtip)
   );
 
-  always_ff @(posedge iClk or negedge iRstn) begin
-    if (!iRstn) begin
+  always_ff @(posedge iClk or posedge iRst) begin
+    if (iRst) begin
       TimingSinkReg <= 1'b0;
     end else begin
-      TimingSinkReg <= ^{RetireValid, RetireRegWrite, RetireRdAddr, RetireWrData, RetirePc};
+      TimingSinkReg <= ^{RetireValid, RetireRegWr, RetireRdAddr, RetireWrData, RetirePc};
     end
   end
 

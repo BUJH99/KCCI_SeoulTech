@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="620" viewBox="0 0 1280 620" role="img" aria-labelledby="title desc">
+  <title id="title">Simple APB 1:1 Master-Slave Architecture Block Diagram</title>
+  <desc id="desc">Black and white academic block diagram showing a direct 1:1 connection between an APB Master and an APB Slave with standard AMBA signal routing.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#111"/>
+    </marker>
+    <marker id="openArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 1 1 L 9 5 L 1 9" fill="none" stroke="#111" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <style><![CDATA[
+      .bg { fill: #fff; }
+      .title { font-family: "Times New Roman", Times, serif; font-size: 25px; font-weight: 600; fill: #111; }
+      .subtitle { font-family: "Times New Roman", Times, serif; font-size: 15px; font-style: italic; fill: #333; }
+      
+      /* Block styling */
+      .box { fill: #fff; stroke: #111; stroke-width: 2; rx: 4px; ry: 4px; }
+      .box-title { font-family: Arial, Helvetica, sans-serif; font-size: 20px; font-weight: bold; fill: #111; text-anchor: middle; }
+      
+      /* Signal routing styling */
+      .signal { fill: none; stroke: #111; stroke-width: 1.5; marker-end: url(#arrow); stroke-linejoin: round; }
+      
+      /* Text styling with halo for readability over lines */
+      .signal-label { 
+        font-family: "Times New Roman", Times, serif; 
+        font-size: 16px; 
+        font-style: italic; 
+        fill: #111; 
+        stroke: #fff;
+        stroke-width: 4px;
+        stroke-linejoin: round;
+        paint-order: stroke fill;
+      }
+      .pin-label {
+        font-family: Arial, Helvetica, sans-serif; 
+        font-size: 12px; 
+        fill: #444;
+      }
+      
+      .tiny { font-family: Arial, Helvetica, sans-serif; font-size: 12px; fill: #444; }
+      .note-line { stroke: #111; stroke-width: 1.1; fill: none; }
+    ]]></style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1280" height="620"/>
+    
+
+  <!-- ==================== BLOCKS ==================== -->
+  
+  <!-- APB Master -->
+  <rect x="200" y="140" width="260" height="360" class="box"/>
+  <text class="box-title" x="330" y="320">APB Master</text>
+  <text class="subtitle" x="330" y="345" text-anchor="middle" style="font-size: 14px;">(Direct Interface)</text>
+
+  <!-- APB Slave -->
+  <rect x="820" y="140" width="260" height="360" class="box"/>
+  <text class="box-title" x="950" y="320">APB Slave</text>
+  <text class="subtitle" x="950" y="345" text-anchor="middle" style="font-size: 14px;">(Peripheral Device)</text>
+
+
+  <!-- ==================== SIGNALS & ROUTING ==================== -->
+
+  <!-- Global Signals (Clock & Reset) -->
+  <!-- Master -->
+  <path class="signal" d="M 260 90 L 260 140"/>
+  <text class="pin-label" x="260" y="80" text-anchor="middle">PCLK</text>
+  <path class="signal" d="M 400 90 L 400 140"/>
+  <text class="pin-label" x="400" y="80" text-anchor="middle">PRESETn</text>
+
+  <!-- Slave -->
+  <path class="signal" d="M 880 90 L 880 140"/>
+  <text class="pin-label" x="880" y="80" text-anchor="middle">PCLK</text>
+  <path class="signal" d="M 1020 90 L 1020 140"/>
+  <text class="pin-label" x="1020" y="80" text-anchor="middle">PRESETn</text>
+
+
+  <!-- Signals from Master to Slave -->
+  
+  <!-- PADDR (Address Bus) -->
+  <path class="signal" d="M 460 200 L 820 200"/>
+  <text class="signal-label" x="640" y="192" text-anchor="middle">PADDR</text>
+
+  <!-- PSEL (Select Signal - Direct) -->
+  <path class="signal" d="M 460 260 L 820 260"/>
+  <text class="signal-label" x="640" y="252" text-anchor="middle">PSEL</text>
+
+  <!-- PWDATA (Write Data Bus) -->
+  <path class="signal" d="M 460 320 L 820 320"/>
+  <text class="signal-label" x="640" y="312" text-anchor="middle">PWDATA</text>
+
+  <!-- Control Signals (PWRITE, PENABLE, PPROT, PSTRB) -->
+  <path class="signal" d="M 460 380 L 820 380"/>
+  <text class="signal-label" x="640" y="372" text-anchor="middle">PWRITE, PENABLE, PPROT, PSTRB</text>
+
+
+  <!-- Signals from Slave to Master -->
+  
+  <!-- Outputs (PRDATA, PREADY, PSLVERR) -->
+  <!-- M 820 -> 460 (Arrow points left towards Master) -->
+  <path class="signal" d="M 820 450 L 460 450"/>
+  <text class="signal-label" x="640" y="442" text-anchor="middle">PRDATA, PREADY, PSLVERR</text>
+
+</svg>

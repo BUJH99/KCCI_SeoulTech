@@ -31,17 +31,15 @@ module tb_TOP_BubbleSort;
   localparam int unsigned LP_DONE_BUDGET_CYCLES = 800;
 
   logic iClk;
-  logic iRstn;
+  logic iRst;
   logic iUartRx;
   logic [LP_GPIO_WIDTH-1:0] iGpioIn;
-  logic iI2cSdaIn;
   logic iSpiMiso;
+  tri1  ioI2cScl;
+  tri1  ioI2cSda;
   logic oUartTx;
   logic [LP_GPIO_WIDTH-1:0] oGpioOut;
   logic [LP_GPIO_WIDTH-1:0] oGpioOe;
-  logic oI2cScl;
-  logic oI2cSdaOut;
-  logic oI2cSdaOe;
   logic oSpiSclk;
   logic oSpiMosi;
   logic oSpiCsN;
@@ -56,17 +54,15 @@ module tb_TOP_BubbleSort;
     .P_GPIO_WIDTH (LP_GPIO_WIDTH)
   ) dut (
     .iClk         (iClk),
-    .iRstn        (iRstn),
+    .iRst        (iRst),
     .iUartRx      (iUartRx),
     .iGpioIn      (iGpioIn),
-    .iI2cSdaIn    (iI2cSdaIn),
     .iSpiMiso     (iSpiMiso),
+    .ioI2cScl     (ioI2cScl),
+    .ioI2cSda     (ioI2cSda),
     .oUartTx      (oUartTx),
     .oGpioOut     (oGpioOut),
     .oGpioOe      (oGpioOe),
-    .oI2cScl      (oI2cScl),
-    .oI2cSdaOut   (oI2cSdaOut),
-    .oI2cSdaOe    (oI2cSdaOe),
     .oSpiSclk     (oSpiSclk),
     .oSpiMosi     (oSpiMosi),
     .oSpiCsN      (oSpiCsN),
@@ -80,10 +76,9 @@ module tb_TOP_BubbleSort;
 
   initial begin
     iClk        = 1'b0;
-    iRstn       = 1'b0;
+    iRst       = 1'b1;
     iUartRx     = 1'b1;
     iGpioIn     = '0;
-    iI2cSdaIn   = 1'b1;
     iSpiMiso    = 1'b0;
   end
 
@@ -107,7 +102,7 @@ module tb_TOP_BubbleSort;
     integer Idx;
     begin
       for (Idx = 0; Idx < LP_ROM_DEPTH; Idx = Idx + 1) begin
-        dut.uInstrRom.MemRom[Idx] = LP_NOP_INSTR;
+        dut.uInstrFetchMemory.uInstrRom.gen_direct_rom.MemRom[Idx] = LP_NOP_INSTR;
       end
     end
   endtask
@@ -126,7 +121,7 @@ module tb_TOP_BubbleSort;
     input logic [31:0] iInstr
   );
     begin
-      dut.uInstrRom.MemRom[iPc[9:2]] = iInstr;
+      dut.uInstrFetchMemory.uInstrRom.gen_direct_rom.MemRom[iPc[9:2]] = iInstr;
     end
   endtask
 
@@ -193,12 +188,28 @@ module tb_TOP_BubbleSort;
 
   task automatic WaitForDoneFlag(
     input int unsigned iBudgetCycles,
-    input string       iContext
+    input string       iContext,
+    output int unsigned oExecCycles,
+    output int unsigned oRetiredInstrs
   );
     int unsigned WaitIdx;
+    bit          Started;
     begin
+      oExecCycles    = 0;
+      oRetiredInstrs = 0;
+      Started        = 1'b0;
+
       for (WaitIdx = 0; WaitIdx < iBudgetCycles; WaitIdx = WaitIdx + 1) begin
         @(posedge iClk);
+        if (!Started && dut.uRv32iCore.FetchValid) begin
+          Started = 1'b1;
+        end
+        if (Started) begin
+          oExecCycles = oExecCycles + 1;
+        end
+        if (dut.uRv32iCore.RetireValid) begin
+          oRetiredInstrs = oRetiredInstrs + 1;
+        end
         if (dut.uRv32iCore.TrapEnterValid) begin
           $fatal(
             1,
@@ -266,22 +277,37 @@ module tb_TOP_BubbleSort;
   endtask
 
   initial begin : run_test
+    int unsigned ExecCycles;
+    int unsigned RetiredInstrs;
+    real         Cpi;
+
     LoadBubbleSortProgram();
     WaitCycles(4);
-    iRstn = 1'b1;
+    iRst = 1'b0;
 
-    WaitForDoneFlag(LP_DONE_BUDGET_CYCLES, "bubble sort done flag");
+    WaitForDoneFlag(LP_DONE_BUDGET_CYCLES, "bubble sort done flag", ExecCycles, RetiredInstrs);
     WaitForPc(LP_DONE_LOOP_PC, 20, "bubble sort done self-loop PC");
     CheckSortedArray();
     CheckEq32(dut.uRv32iCore.Pc, LP_DONE_LOOP_PC, "bubble sort done self-loop PC");
 
+    if (RetiredInstrs == 0) begin
+      $fatal(1, "[FAIL] bubble sort CPI: no retired instructions counted");
+    end
+
+    Cpi = ExecCycles;
+    Cpi = Cpi / RetiredInstrs;
+    $display("[INFO] bubble sort cycles=%0d retires=%0d CPI=%0.4f", ExecCycles, RetiredInstrs, Cpi);
+
     $display(
-      "[PASS] bubble sort completed: array={%0d,%0d,%0d,%0d,%0d} sim_time_ns=%0t",
+      "[PASS] bubble sort completed: array={%0d,%0d,%0d,%0d,%0d} cycles=%0d retires=%0d CPI=%0.4f sim_time_ns=%0t",
       GetDmemWord(LP_ARRAY_BASE_WORD + 0),
       GetDmemWord(LP_ARRAY_BASE_WORD + 1),
       GetDmemWord(LP_ARRAY_BASE_WORD + 2),
       GetDmemWord(LP_ARRAY_BASE_WORD + 3),
       GetDmemWord(LP_ARRAY_BASE_WORD + 4),
+      ExecCycles,
+      RetiredInstrs,
+      Cpi,
       $time
     );
     $finish;

@@ -1,11 +1,11 @@
 /*
 [MODULE_INFO_START]
 Name: APB_I2C
-Role: APB I2C master peripheral with event and error interrupt outputs
+Role: APB I2C master peripheral with v1 register-transaction support
 Summary:
-  - Delegates register decode and sticky IRQ cause tracking to I2cRegs
-  - Delegates compact transaction timing and external pin drive to I2cCore
-  - Separates event and error IRQ outputs for independent PLIC-lite source IDs
+  - Delegates APB decode and sticky IRQ tracking to I2cRegs
+  - Delegates 7-bit single-master register read/write timing to I2cCore
+  - Exposes SCL/SDA output-enable style controls for open-drain board adaptation
 [MODULE_INFO_END]
 */
 
@@ -13,7 +13,7 @@ Summary:
 
 module APB_I2C (
   input  logic        iClk,
-  input  logic        iRstn,
+  input  logic        iRst,
   input  logic        iPsel,
   input  logic        iPenable,
   input  logic        iPwrite,
@@ -26,81 +26,97 @@ module APB_I2C (
   output logic        oPready,
   output logic        oPslverr,
   output logic        oScl,
+  output logic        oSclOe,
   output logic        oSdaOut,
   output logic        oSdaOe,
   output logic        oEventIrq,
-  output logic        oErrorIrq
+  output logic        oErrIrq
 );
 
   logic        AccessEn;
-  logic        CtrlEnable;
+  logic        CtrlEn;
   logic        CtrlStartPulse;
-  logic        CtrlStop;
-  logic        CtrlAck;
-  logic [7:0]  TxData;
+  logic        CtrlRw;
+  logic        StartRw;
+  logic        CoreRstPulse;
+  logic [6:0]  SlaveAddr;
+  logic [7:0]  RegAddr;
+  logic [31:0] Wdata;
+  logic [2:0]  Len;
   logic [15:0] ClkDiv;
-  logic [7:0]  Addr;
   logic        CoreBusy;
   logic        CoreDonePulse;
   logic        CoreRxValidPulse;
   logic        CoreTxReady;
-  logic [7:0]  CoreRxData;
+  logic        CoreAckOk;
+  logic [31:0] CoreRxData;
   logic        CoreNackPulse;
   logic        CoreArbLostPulse;
-  logic        CoreBusErrorPulse;
+  logic        CoreBusErrPulse;
+  logic        CoreTimeoutPulse;
 
   assign oPready  = 1'b1;
   assign AccessEn = iPsel && iPenable && oPready;
 
   I2cRegs uI2cRegs (
-    .iClk               (iClk),
-    .iRstn              (iRstn),
-    .iAccessEn          (AccessEn),
-    .iPwrite            (iPwrite),
-    .iPaddr             (iPaddr),
-    .iPstrb             (iPstrb),
-    .iPwdata            (iPwdata),
-    .iBusy              (CoreBusy),
-    .iDonePulse         (CoreDonePulse),
-    .iRxValidPulse      (CoreRxValidPulse),
-    .iTxReady           (CoreTxReady),
-    .iRxData            (CoreRxData),
-    .iNackPulse         (CoreNackPulse),
-    .iArbLostPulse      (CoreArbLostPulse),
-    .iBusErrorPulse     (CoreBusErrorPulse),
-    .oPrdata            (oPrdata),
-    .oPslverr           (oPslverr),
-    .oCtrlEnable        (CtrlEnable),
-    .oCtrlStartPulse    (CtrlStartPulse),
-    .oCtrlStop          (CtrlStop),
-    .oCtrlAck           (CtrlAck),
-    .oTxData            (TxData),
-    .oClkDiv            (ClkDiv),
-    .oAddr              (Addr),
-    .oEventIrq          (oEventIrq),
-    .oErrorIrq          (oErrorIrq)
+    .iClk              (iClk),
+    .iRst             (iRst),
+    .iAccessEn         (AccessEn),
+    .iPwrite           (iPwrite),
+    .iPaddr            (iPaddr),
+    .iPstrb            (iPstrb),
+    .iPwdata           (iPwdata),
+    .iBusy             (CoreBusy),
+    .iDonePulse        (CoreDonePulse),
+    .iRxValidPulse     (CoreRxValidPulse),
+    .iTxReady          (CoreTxReady),
+    .iAckOk            (CoreAckOk),
+    .iRxData           (CoreRxData),
+    .iNackPulse        (CoreNackPulse),
+    .iArbLostPulse     (CoreArbLostPulse),
+    .iBusErrPulse    (CoreBusErrPulse),
+    .iTimeoutPulse     (CoreTimeoutPulse),
+    .oPrdata           (oPrdata),
+    .oPslverr          (oPslverr),
+    .oCtrlEn       (CtrlEn),
+    .oCtrlStartPulse   (CtrlStartPulse),
+    .oCtrlRw           (CtrlRw),
+    .oStartRw          (StartRw),
+    .oCoreRstPulse   (CoreRstPulse),
+    .oSlaveAddr        (SlaveAddr),
+    .oRegAddr          (RegAddr),
+    .oWdata            (Wdata),
+    .oLen              (Len),
+    .oClkDiv           (ClkDiv),
+    .oEventIrq         (oEventIrq),
+    .oErrIrq         (oErrIrq)
   );
 
   I2cCore uI2cCore (
     .iClk           (iClk),
-    .iRstn          (iRstn),
-    .iEnable        (CtrlEnable),
+    .iRst          (iRst),
+    .iEn        (CtrlEn),
     .iStartPulse    (CtrlStartPulse),
-    .iStop          (CtrlStop),
-    .iAck           (CtrlAck),
-    .iTxData        (TxData),
+    .iCoreRstPulse(CoreRstPulse),
+    .iRw            (StartRw),
+    .iSlaveAddr     (SlaveAddr),
+    .iRegAddr       (RegAddr),
+    .iWdata         (Wdata),
+    .iLen           (Len),
     .iClkDiv        (ClkDiv),
-    .iAddr          (Addr),
     .iSdaIn         (iSdaIn),
     .oBusy          (CoreBusy),
     .oDonePulse     (CoreDonePulse),
     .oRxValidPulse  (CoreRxValidPulse),
     .oTxReady       (CoreTxReady),
+    .oAckOk         (CoreAckOk),
     .oRxData        (CoreRxData),
     .oNackPulse     (CoreNackPulse),
     .oArbLostPulse  (CoreArbLostPulse),
-    .oBusErrorPulse (CoreBusErrorPulse),
+    .oBusErrPulse (CoreBusErrPulse),
+    .oTimeoutPulse  (CoreTimeoutPulse),
     .oScl           (oScl),
+    .oSclOe         (oSclOe),
     .oSdaOut        (oSdaOut),
     .oSdaOe         (oSdaOe)
   );

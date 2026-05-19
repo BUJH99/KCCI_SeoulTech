@@ -14,7 +14,7 @@ module FndTickGen #(
   parameter int unsigned P_CLK_HZ = 100_000_000
 ) (
   input  logic iClk,
-  input  logic iRstn,
+  input  logic iRst,
 
   output logic oTick1kHz,
   output logic oTick2Hz
@@ -28,8 +28,8 @@ module FndTickGen #(
   logic [LP_TICK_1KHZ_CNT_W-1:0] Tick1kHzCnt;
   logic [LP_TICK_2HZ_CNT_W-1:0]  Tick2HzCnt;
 
-  always_ff @(posedge iClk or negedge iRstn) begin
-    if (!iRstn) begin
+  always_ff @(posedge iClk or posedge iRst) begin
+    if (iRst) begin
       Tick1kHzCnt <= '0;
       Tick2HzCnt  <= '0;
       oTick1kHz   <= 1'b0;

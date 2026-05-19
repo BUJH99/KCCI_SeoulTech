@@ -13,7 +13,7 @@ Summary:
 
 module Regfile (
   input  logic        iClk,
-  input  logic        iRstn,
+  input  logic        iRst,
   input  logic [4:0]  iRs1Addr,
   input  logic [4:0]  iRs2Addr,
   input  logic [4:0]  iRdAddr,
@@ -56,8 +56,8 @@ module Regfile (
   // ==== 3. Synchronous Write Port ====
   
   // Writes occur on the clock edge. x0 is never architecturally writable.
-  always_ff @(posedge iClk or negedge iRstn) begin
-    if (!iRstn) begin
+  always_ff @(posedge iClk or posedge iRst) begin
+    if (iRst) begin
       for (Idx = 0; Idx < 32; Idx = Idx + 1) begin
         MemReg[Idx] <= '0;
       end

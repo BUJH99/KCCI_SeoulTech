@@ -1,0 +1,112 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720" role="img" aria-labelledby="title desc">
+  <title id="title">Current RV32I MASTER SoC Top View</title>
+  <desc id="desc">RV32I core, instruction ROM, data RAM, AXI4-Lite to APB bus, APB peripherals including Timer, and SLAVE FPGA links.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font: 700 24px Arial, sans-serif; fill: #111827; }
+      .label { font: 700 15px Arial, sans-serif; fill: #111827; }
+      .small { font: 12px Arial, sans-serif; fill: #374151; }
+      .tiny { font: 11px Arial, sans-serif; fill: #4b5563; }
+      .box { fill: #ffffff; stroke: #334155; stroke-width: 2; rx: 8; }
+      .core { fill: #e0f2fe; stroke: #0369a1; stroke-width: 2; rx: 8; }
+      .mem { fill: #dcfce7; stroke: #15803d; stroke-width: 2; rx: 8; }
+      .bus { fill: #fef3c7; stroke: #b45309; stroke-width: 2; rx: 8; }
+      .peri { fill: #f3e8ff; stroke: #7e22ce; stroke-width: 2; rx: 8; }
+      .irq { fill: #fee2e2; stroke: #b91c1c; stroke-width: 2; rx: 8; }
+      .slave { fill: #e5e7eb; stroke: #374151; stroke-width: 2; rx: 8; }
+      .line { stroke: #334155; stroke-width: 2.2; fill: none; marker-end: url(#arrow); }
+      .irqline { stroke: #dc2626; stroke-width: 2.2; fill: none; marker-end: url(#arrow-red); }
+      .link { stroke: #2563eb; stroke-width: 2.2; fill: none; marker-end: url(#arrow-blue); }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#334155"/>
+    </marker>
+    <marker id="arrow-red" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#dc2626"/>
+    </marker>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#2563eb"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1280" height="720"/>
+  <text class="title" x="40" y="44">MASTER FPGA: RV32I 5-Stage SoC Current Top View</text>
+  <text class="small" x="40" y="68">APB Timer added at 0x4000_6000. Timer interrupt uses MTIP path, not INTC source ID.</text>
+
+  <rect class="core" x="60" y="150" width="180" height="110"/>
+  <text class="label" x="92" y="186">Rv32iCore</text>
+  <text class="small" x="86" y="210">IF/ID/EX/MEM/WB</text>
+  <text class="small" x="83" y="232">CSR + TrapController</text>
+
+  <rect class="mem" x="60" y="340" width="180" height="80"/>
+  <text class="label" x="103" y="374">InstrRom</text>
+  <text class="small" x="87" y="397">bubble_sort_demo.mem</text>
+
+  <rect class="mem" x="310" y="340" width="180" height="80"/>
+  <text class="label" x="360" y="374">DataRam</text>
+  <text class="small" x="340" y="397">1 KiB data window</text>
+
+  <rect class="bus" x="310" y="150" width="190" height="110"/>
+  <text class="label" x="352" y="184">DataBusInterconnect</text>
+  <text class="small" x="340" y="208">RAM decode</text>
+  <text class="small" x="340" y="230">APB window decode</text>
+
+  <rect class="bus" x="560" y="120" width="210" height="90"/>
+  <text class="label" x="592" y="154">DataBusAxiLiteMaster</text>
+  <text class="small" x="610" y="178">native to AXI4-Lite</text>
+
+  <rect class="bus" x="560" y="250" width="210" height="90"/>
+  <text class="label" x="604" y="284">AxiLiteToApbBridge</text>
+  <text class="small" x="612" y="308">APB setup/access</text>
+
+  <rect class="bus" x="830" y="190" width="150" height="90"/>
+  <text class="label" x="873" y="226">APBMux</text>
+  <text class="small" x="856" y="250">4 KiB windows</text>
+
+  <rect class="peri" x="1040" y="90" width="150" height="52"/>
+  <text class="label" x="1080" y="121">UART</text>
+  <rect class="peri" x="1040" y="154" width="150" height="52"/>
+  <text class="label" x="1082" y="185">GPIO</text>
+  <rect class="peri" x="1040" y="218" width="150" height="52"/>
+  <text class="label" x="1086" y="249">I2C</text>
+  <rect class="peri" x="1040" y="282" width="150" height="52"/>
+  <text class="label" x="1086" y="313">SPI</text>
+  <rect class="peri" x="1040" y="346" width="150" height="52"/>
+  <text class="label" x="1087" y="377">FND</text>
+  <rect class="irq" x="1040" y="410" width="150" height="52"/>
+  <text class="label" x="1082" y="441">INTC</text>
+  <rect class="irq" x="1040" y="474" width="150" height="52"/>
+  <text class="label" x="1077" y="505">Timer</text>
+  <text class="tiny" x="1071" y="519">0x4000_6000</text>
+
+  <rect class="slave" x="1010" y="585" width="210" height="86"/>
+  <text class="label" x="1063" y="617">SLAVE FPGA</text>
+  <text class="small" x="1043" y="640">SPI trace receiver</text>
+  <text class="small" x="1043" y="660">I2C register target + FND</text>
+
+  <path class="line" d="M240 190 H310"/>
+  <path class="line" d="M150 260 V340"/>
+  <path class="line" d="M405 260 V340"/>
+  <path class="line" d="M500 180 H560"/>
+  <path class="line" d="M665 210 V250"/>
+  <path class="line" d="M770 295 H830"/>
+  <path class="line" d="M980 235 H1040"/>
+  <path class="line" d="M980 235 C1010 116 1010 116 1040 116"/>
+  <path class="line" d="M980 235 C1010 180 1010 180 1040 180"/>
+  <path class="line" d="M980 235 C1010 244 1010 244 1040 244"/>
+  <path class="line" d="M980 235 C1010 308 1010 308 1040 308"/>
+  <path class="line" d="M980 235 C1010 372 1010 372 1040 372"/>
+  <path class="line" d="M980 235 C1010 436 1010 436 1040 436"/>
+  <path class="line" d="M980 235 C1010 500 1010 500 1040 500"/>
+
+  <path class="irqline" d="M1040 436 C850 545 370 555 230 250"/>
+  <text class="tiny" x="570" y="536">machine external interrupt, mcause 0x8000_000B</text>
+  <path class="irqline" d="M1040 500 C820 610 300 610 210 250"/>
+  <text class="tiny" x="566" y="602">machine timer interrupt, mcause 0x8000_0007</text>
+
+  <path class="link" d="M1115 270 V585"/>
+  <text class="tiny" x="1126" y="426">I2C SCL/SDA</text>
+  <path class="link" d="M1168 334 V585"/>
+  <text class="tiny" x="1178" y="462">SPI SCLK/MOSI/CSN</text>
+</svg>

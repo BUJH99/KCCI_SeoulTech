@@ -14,7 +14,7 @@ module GpioIrqCtrl #(
   parameter int unsigned P_GPIO_WIDTH = 8
 ) (
   input  logic                    iClk,
-  input  logic                    iRstn,
+  input  logic                    iRst,
   input  logic [P_GPIO_WIDTH-1:0] iGpioIn,
   input  logic [P_GPIO_WIDTH-1:0] iIrqRiseEn,
   input  logic [P_GPIO_WIDTH-1:0] iIrqFallEn,
@@ -33,8 +33,8 @@ module GpioIrqCtrl #(
   assign GpioFallPulse = GpioInPrev & ~iGpioIn;
   assign IrqSetMask    = (GpioRisePulse & iIrqRiseEn) | (GpioFallPulse & iIrqFallEn);
 
-  always_ff @(posedge iClk or negedge iRstn) begin
-    if (!iRstn) begin
+  always_ff @(posedge iClk or posedge iRst) begin
+    if (iRst) begin
       GpioInPrev <= '0;
       oIrqStatus <= '0;
     end else begin

@@ -26,9 +26,9 @@ module SystemDecoder (
 
     unique case (iOpcode)
 
-      // FENCE instructions are treated as Datapath NOPs in this simple pipeline
+      // FENCE and FENCE.I are treated as datapath NOPs in this simple pipeline.
       rv32i_pkg::LP_OPCODE_MISCMEM: begin
-        oCtrlDec.Illegal = (iFunct3 != 3'b000);
+        oCtrlDec.Illegal = (iFunct3 != 3'b000) && (iFunct3 != 3'b001);
         if (!oCtrlDec.Illegal) begin
           oCtrlDec.Ctrl.SysOp = rv32i_pkg::SYS_FENCE;
         end

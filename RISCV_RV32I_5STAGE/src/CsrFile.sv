@@ -12,16 +12,17 @@ Summary:
 
 module CsrFile (
   input  logic        iClk,
-  input  logic        iRstn,
+  input  logic        iRst,
   input  logic [11:0] iCsrAddr,
-  input  logic        iCsrWriteEn,
-  input  logic [11:0] iCsrWriteAddr,
-  input  logic [31:0] iCsrWriteData,
+  input  logic        iCsrWrEn,
+  input  logic [11:0] iCsrWrAddr,
+  input  logic [31:0] iCsrWrData,
   input  logic        iMretValid,
   input  logic        iTrapEnterValid,
   input  logic [31:0] iTrapEnterEpc,
   input  logic [31:0] iTrapEnterCause,
   input  logic        iExtIrqPending,
+  input  logic        iTimerIrqPending,
 
   output logic [31:0] oCsrRdata,
   output logic [31:0] oMtvec,
@@ -29,7 +30,9 @@ module CsrFile (
   output logic        oMstatusMie,
   output logic        oMstatusMpie,
   output logic        oMieMeie,
-  output logic        oMipMeip
+  output logic        oMieMtie,
+  output logic        oMipMeip,
+  output logic        oMipMtip
 );
 
   import rv32i_pkg::*;
@@ -65,6 +68,11 @@ module CsrFile (
   logic [31:0] MstatusWord;
   logic [31:0] MieWord;
   logic [31:0] MipWord;
+  logic        MipMtip;
+  logic        MipMeip;
+
+  assign MipMtip = MipMtipSw || iTimerIrqPending;
+  assign MipMeip = MipMeipSw || iExtIrqPending;
 
   always_comb begin
     MstatusWord = '0;
@@ -78,8 +86,8 @@ module CsrFile (
     MieWord[LP_MIE_MTIE_BIT]         = MieMtie;
     MieWord[LP_MIE_MEIE_BIT]         = MieMeie;
     MipWord[LP_MIP_MSIP_BIT]         = MipMsipSw;
-    MipWord[LP_MIP_MTIP_BIT]         = MipMtipSw;
-    MipWord[LP_MIP_MEIP_BIT]         = MipMeipSw || iExtIrqPending;
+    MipWord[LP_MIP_MTIP_BIT]         = MipMtip;
+    MipWord[LP_MIP_MEIP_BIT]         = MipMeip;
   end
 
   always_comb begin
@@ -114,52 +122,52 @@ module CsrFile (
     McauseNext      = Mcause;
     MscratchNext    = Mscratch;
 
-    if (iCsrWriteEn) begin
-      unique case (iCsrWriteAddr)
+    if (iCsrWrEn) begin
+      unique case (iCsrWrAddr)
         LP_CSR_MSTATUS: begin
-          MstatusMieNext  = iCsrWriteData[LP_MSTATUS_MIE_BIT];
-          MstatusMpieNext = iCsrWriteData[LP_MSTATUS_MPIE_BIT];
-          MstatusMppNext  = iCsrWriteData[LP_MSTATUS_MPP_MSB:LP_MSTATUS_MPP_LSB];
+          MstatusMieNext  = iCsrWrData[LP_MSTATUS_MIE_BIT];
+          MstatusMpieNext = iCsrWrData[LP_MSTATUS_MPIE_BIT];
+          MstatusMppNext  = iCsrWrData[LP_MSTATUS_MPP_MSB:LP_MSTATUS_MPP_LSB];
         end
 
         LP_CSR_MIE: begin
-          MieMsieNext = iCsrWriteData[LP_MIE_MSIE_BIT];
-          MieMtieNext = iCsrWriteData[LP_MIE_MTIE_BIT];
-          MieMeieNext = iCsrWriteData[LP_MIE_MEIE_BIT];
+          MieMsieNext = iCsrWrData[LP_MIE_MSIE_BIT];
+          MieMtieNext = iCsrWrData[LP_MIE_MTIE_BIT];
+          MieMeieNext = iCsrWrData[LP_MIE_MEIE_BIT];
         end
 
         LP_CSR_MTVEC: begin
-          unique case (iCsrWriteData[LP_MTVEC_MODE_MSB:LP_MTVEC_MODE_LSB])
+          unique case (iCsrWrData[LP_MTVEC_MODE_MSB:LP_MTVEC_MODE_LSB])
             LP_MTVEC_MODE_DIRECT,
             LP_MTVEC_MODE_VECTORED: begin
-              MtvecNext = iCsrWriteData;
+              MtvecNext = iCsrWrData;
             end
 
             default: begin
-              MtvecNext = {iCsrWriteData[31:2], LP_MTVEC_MODE_DIRECT};
+              MtvecNext = {iCsrWrData[31:2], LP_MTVEC_MODE_DIRECT};
             end
           endcase
         end
 
         LP_CSR_MSCRATCH: begin
-          MscratchNext = iCsrWriteData;
+          MscratchNext = iCsrWrData;
         end
 
         LP_CSR_MEPC: begin
-          MepcNext = {iCsrWriteData[31:2], 2'b00};
+          MepcNext = {iCsrWrData[31:2], 2'b00};
         end
 
         LP_CSR_MCAUSE: begin
-          McauseNext = iCsrWriteData;
+          McauseNext = iCsrWrData;
         end
 
         LP_CSR_MTVAL: begin
         end
 
         LP_CSR_MIP: begin
-          MipMsipSwNext = iCsrWriteData[LP_MIP_MSIP_BIT];
-          MipMtipSwNext = iCsrWriteData[LP_MIP_MTIP_BIT];
-          MipMeipSwNext = iCsrWriteData[LP_MIP_MEIP_BIT];
+          MipMsipSwNext = iCsrWrData[LP_MIP_MSIP_BIT];
+          MipMtipSwNext = iCsrWrData[LP_MIP_MTIP_BIT];
+          MipMeipSwNext = iCsrWrData[LP_MIP_MEIP_BIT];
         end
 
         default: begin
@@ -182,8 +190,8 @@ module CsrFile (
     end
   end
 
-  always_ff @(posedge iClk or negedge iRstn) begin
-    if (!iRstn) begin
+  always_ff @(posedge iClk or posedge iRst) begin
+    if (iRst) begin
       MstatusMie  <= 1'b0;
       MstatusMpie <= 1'b0;
       MstatusMpp  <= LP_MSTATUS_MPP_USER;
@@ -219,6 +227,8 @@ module CsrFile (
   assign oMstatusMie  = MstatusMie;
   assign oMstatusMpie = MstatusMpie;
   assign oMieMeie     = MieMeie;
-  assign oMipMeip     = MipMeipSw || iExtIrqPending;
+  assign oMieMtie     = MieMtie;
+  assign oMipMeip     = MipMeip;
+  assign oMipMtip     = MipMtip;
 
 endmodule

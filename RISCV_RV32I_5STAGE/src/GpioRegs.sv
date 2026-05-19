@@ -14,7 +14,7 @@ module GpioRegs #(
   parameter int unsigned P_GPIO_WIDTH = 8
 ) (
   input  logic                    iClk,
-  input  logic                    iRstn,
+  input  logic                    iRst,
   input  logic                    iAccessEn,
   input  logic                    iPwrite,
   input  logic [11:0]             iPaddr,
@@ -48,20 +48,20 @@ module GpioRegs #(
   logic [31:0] IrqFallEnWord;
   logic [31:0] IrqStatusWord;
   logic [31:0] IrqClrWord;
-  logic [31:0] DataOutWriteWord;
-  logic [31:0] DirWriteWord;
-  logic [31:0] IrqRiseEnWriteWord;
-  logic [31:0] IrqFallEnWriteWord;
+  logic [31:0] DataOutWrWord;
+  logic [31:0] DirWrWord;
+  logic [31:0] IrqRiseEnWrWord;
+  logic [31:0] IrqFallEnWrWord;
   
   assign DataOutWord        = {{LP_PAD_WIDTH{1'b0}}, oDataOut};
   assign DirWord            = {{LP_PAD_WIDTH{1'b0}}, oDir};
   assign IrqRiseEnWord      = {{LP_PAD_WIDTH{1'b0}}, oIrqRiseEn};
   assign IrqFallEnWord      = {{LP_PAD_WIDTH{1'b0}}, oIrqFallEn};
   assign IrqStatusWord      = {{LP_PAD_WIDTH{1'b0}}, iIrqStatus};
-  assign DataOutWriteWord   = ByteWriteMerge(DataOutWord, iPwdata, iPstrb);
-  assign DirWriteWord       = ByteWriteMerge(DirWord, iPwdata, iPstrb);
-  assign IrqRiseEnWriteWord = ByteWriteMerge(IrqRiseEnWord, iPwdata, iPstrb);
-  assign IrqFallEnWriteWord = ByteWriteMerge(IrqFallEnWord, iPwdata, iPstrb);
+  assign DataOutWrWord   = ByteWriteMerge(DataOutWord, iPwdata, iPstrb);
+  assign DirWrWord       = ByteWriteMerge(DirWord, iPwdata, iPstrb);
+  assign IrqRiseEnWrWord = ByteWriteMerge(IrqRiseEnWord, iPwdata, iPstrb);
+  assign IrqFallEnWrWord = ByteWriteMerge(IrqFallEnWord, iPwdata, iPstrb);
   assign IrqClrWord         = ByteWriteMerge(32'd0, iPwdata, iPstrb);
   assign oIrqClrMask        = (iAccessEn && iPwrite && (iPaddr == LP_REG_IRQ_STATUS))
                             ? IrqClrWord[P_GPIO_WIDTH-1:0]
@@ -117,27 +117,27 @@ module GpioRegs #(
   end
 
   //WRITE
-  always_ff @(posedge iClk or negedge iRstn) begin
-    if (!iRstn) begin
+  always_ff @(posedge iClk or posedge iRst) begin
+    if (iRst) begin
       oDataOut   <= '0;
       oDir       <= '0;
       oIrqRiseEn <= '0;
       oIrqFallEn <= '0;
     end else begin
       if (iAccessEn && iPwrite && (iPaddr == LP_REG_DATA_OUT)) begin
-        oDataOut <= DataOutWriteWord[P_GPIO_WIDTH-1:0];
+        oDataOut <= DataOutWrWord[P_GPIO_WIDTH-1:0];
       end
 
       if (iAccessEn && iPwrite && (iPaddr == LP_REG_DIR)) begin
-        oDir <= DirWriteWord[P_GPIO_WIDTH-1:0];
+        oDir <= DirWrWord[P_GPIO_WIDTH-1:0];
       end
 
       if (iAccessEn && iPwrite && (iPaddr == LP_REG_IRQ_RISE_EN)) begin
-        oIrqRiseEn <= IrqRiseEnWriteWord[P_GPIO_WIDTH-1:0];
+        oIrqRiseEn <= IrqRiseEnWrWord[P_GPIO_WIDTH-1:0];
       end
 
       if (iAccessEn && iPwrite && (iPaddr == LP_REG_IRQ_FALL_EN)) begin
-        oIrqFallEn <= IrqFallEnWriteWord[P_GPIO_WIDTH-1:0];
+        oIrqFallEn <= IrqFallEnWrWord[P_GPIO_WIDTH-1:0];
       end
     end
   end

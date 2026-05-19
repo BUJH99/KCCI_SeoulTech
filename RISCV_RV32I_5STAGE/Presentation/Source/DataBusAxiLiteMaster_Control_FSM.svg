@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000">
+          <defs>
+            <!-- Academic Standard Solid Arrow -->
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#000000" />
+            </marker>
+          </defs>
+
+          <style>
+            /* 학술지 스타일 CSS (Black &amp; White, Crisp Lines) */
+            .state-node { fill: #ffffff; stroke: #000000; stroke-width: 2.5px; }
+            .state-text { font-family: 'Arial', sans-serif; font-weight: bold; font-size: 15px; fill: #000000; text-anchor: middle; }
+            
+            .edge-solid { fill: none; stroke: #000000; stroke-width: 1.5px; marker-end: url(#arrow); }
+            
+            .edge-label { 
+                font-family: 'Arial', sans-serif; 
+                font-size: 15px; 
+                font-weight: normal; 
+                fill: #000000; 
+                text-anchor: middle; 
+                paint-order: stroke; 
+                stroke: #ffffff; 
+                stroke-width: 7px; 
+                stroke-linecap: round; 
+                stroke-linejoin: round; 
+            }
+            .title-text { font-family: 'Arial', sans-serif; font-weight: bold; font-size: 22px; fill: #000000; text-anchor: middle; }
+          </style>
+
+ 
+
+          <!-- ==================== TRANSITION EDGES ==================== -->
+          <!-- 좌우 대칭 분기 계산: IDLE(500, 150), Write(150, x), Read(850, x) -->
+          <!-- 원의 반지름(r=95) 경계에 맞닿도록 시작점/끝점 최단 거리 산출 -->
+
+          <!-- 1. IDLE -> WRITE_ADDR_DATA (Left Branch) -->
+          <!-- Start(428, 212) -> End(222, 388) -->
+          <path class="edge-solid" d="M 428 212 L 222 388" />
+
+          <!-- 2. WRITE_ADDR_DATA -> WRITE_RESP -->
+          <!-- Start(150, 545) -> End(150, 705) -->
+          <path class="edge-solid" d="M 150 545 L 150 705" />
+
+          <!-- 3. WRITE_RESP -> IDLE (Return Path) -->
+          <!-- Start(195, 717) -> End(455, 233) -->
+          <path class="edge-solid" d="M 195 717 L 455 233" />
+
+
+          <!-- 4. IDLE -> READ_ADDR (Right Branch) -->
+          <!-- Start(572, 212) -> End(778, 388) -->
+          <path class="edge-solid" d="M 572 212 L 778 388" />
+
+          <!-- 5. READ_ADDR -> READ_DATA -->
+          <!-- Start(850, 545) -> End(850, 705) -->
+          <path class="edge-solid" d="M 850 545 L 850 705" />
+
+          <!-- 6. READ_DATA -> IDLE (Return Path) -->
+          <!-- Start(805, 717) -> End(545, 233) -->
+          <path class="edge-solid" d="M 805 717 L 545 233" />
+
+
+          <!-- ==================== STATE NODES (PERFECT CIRCLES) ==================== -->
+
+          <!-- 1. IDLE (Top Center) -->
+          <g transform="translate(500, 150)">
+            <circle class="state-node" cx="0" cy="0" r="95" />
+            <text class="state-text" x="0" y="5">IDLE</text>
+          </g>
+
+          <!-- 2. WRITE_ADDR_DATA (Left-Mid) -->
+          <g transform="translate(150, 450)">
+            <circle class="state-node" cx="0" cy="0" r="95" />
+            <text class="state-text" x="0" y="-8">WRITE_</text>
+            <text class="state-text" x="0" y="16">ADDR_DATA</text>
+          </g>
+
+          <!-- 3. WRITE_RESP (Left-Bottom) -->
+          <g transform="translate(150, 800)">
+            <circle class="state-node" cx="0" cy="0" r="95" />
+            <text class="state-text" x="0" y="-8">WRITE_</text>
+            <text class="state-text" x="0" y="16">RESP</text>
+          </g>
+
+          <!-- 4. READ_ADDR (Right-Mid) -->
+          <g transform="translate(850, 450)">
+            <circle class="state-node" cx="0" cy="0" r="95" />
+            <text class="state-text" x="0" y="-8">READ_</text>
+            <text class="state-text" x="0" y="16">ADDR</text>
+          </g>
+
+          <!-- 5. READ_DATA (Right-Bottom) -->
+          <g transform="translate(850, 800)">
+            <circle class="state-node" cx="0" cy="0" r="95" />
+            <text class="state-text" x="0" y="-8">READ_</text>
+            <text class="state-text" x="0" y="16">DATA</text>
+          </g>
+
+
+          <!-- ==================== TRANSITION LABELS ==================== -->
+
+          <!-- IDLE -> WRITE_ADDR_DATA -->
+          <text class="edge-label" x="325" y="290">
+            <tspan x="325" dy="0">iReqValid</tspan>
+            <tspan x="325" dy="18">&amp;&amp; iReqWrite</tspan>
+          </text>
+
+          <!-- WRITE_ADDR_DATA -> WRITE_RESP -->
+          <text class="edge-label" x="150" y="615">
+            <tspan x="150" dy="0">(awDone || awHandshake)</tspan>
+            <tspan x="150" dy="18">&amp;&amp; (wDone || wHandshake)</tspan>
+          </text>
+
+          <!-- WRITE_RESP -> IDLE -->
+          <text class="edge-label" x="325" y="475">
+            <tspan x="325" dy="0">iAxiBvalid</tspan>
+          </text>
+
+          <!-- IDLE -> READ_ADDR -->
+          <text class="edge-label" x="675" y="290">
+            <tspan x="675" dy="0">iReqValid</tspan>
+            <tspan x="675" dy="18">&amp;&amp; !iReqWrite</tspan>
+          </text>
+
+          <!-- READ_ADDR -> READ_DATA -->
+          <text class="edge-label" x="850" y="625">
+            <tspan x="850" dy="0">arHandshake</tspan>
+          </text>
+
+          <!-- READ_DATA -> IDLE -->
+          <text class="edge-label" x="675" y="475">
+            <tspan x="675" dy="0">iAxiRvalid</tspan>
+          </text>
+
+        </svg>

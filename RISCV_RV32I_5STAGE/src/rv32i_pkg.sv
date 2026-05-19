@@ -125,11 +125,12 @@ package rv32i_pkg;
 
   typedef struct packed {
     logic [31:0] RspRdata;
+    logic        RspReady;
   } InstrBusRsp_t;
 
   typedef struct packed {
     logic        ReqValid;
-    logic        ReqWrite;
+    logic        ReqWr;
     logic [31:0] ReqAddr;
     logic [3:0]  ReqByteEn;
     logic [31:0] ReqWdata;
@@ -292,6 +293,12 @@ package rv32i_pkg;
 
   localparam logic [31:0] LP_DATA_RAM_BASE  = 32'h0000_0000;
   localparam logic [31:0] LP_DATA_RAM_LAST  = 32'h0000_03FF;
+  localparam logic [31:0] LP_BOOT_ROM_BASE  = 32'h0000_0000;
+  localparam logic [31:0] LP_BOOT_ROM_LAST  = 32'h0000_0FFF;
+  localparam logic [31:0] LP_PROGRAM_RAM_BASE = 32'h0000_1000;
+  localparam logic [31:0] LP_PROGRAM_RAM_LAST = 32'h0000_FFFF;
+  localparam int unsigned LP_INSTR_MEM_IMPL_DISTRIBUTED = 0;
+  localparam int unsigned LP_INSTR_MEM_IMPL_BLOCK       = 1;
   localparam logic [31:0] LP_APB_BASE       = 32'h4000_0000;
   localparam logic [31:0] LP_APB_LAST       = 32'h4000_FFFF;
   localparam logic [31:0] LP_APB_UART_BASE  = 32'h4000_0000;
@@ -300,6 +307,8 @@ package rv32i_pkg;
   localparam logic [31:0] LP_APB_INTC_BASE  = 32'h4000_3000;
   localparam logic [31:0] LP_APB_SPI_BASE   = 32'h4000_4000;
   localparam logic [31:0] LP_APB_FND_BASE   = 32'h4000_5000;
+  localparam logic [31:0] LP_APB_TIMER_BASE = 32'h4000_6000;
+  localparam logic [31:0] LP_APB_INST_DMA_BASE = 32'h4000_7000;
 
   localparam int unsigned LP_INTC_NUM_SOURCES   = 6;
   localparam int unsigned LP_INTC_PRIORITY_WIDTH = 3;
@@ -320,6 +329,17 @@ package rv32i_pkg;
   localparam logic [31:0] LP_MCAUSE_MACHINE_SOFT_INT    = 32'h8000_0003;
   localparam logic [31:0] LP_MCAUSE_MACHINE_TIMER_INT   = 32'h8000_0007;
   localparam logic [31:0] LP_MCAUSE_MACHINE_EXT_INT     = 32'h8000_000B;
+
+  typedef enum logic [1:0] {
+    IRQ_NONE,
+    IRQ_MACHINE_TIMER,
+    IRQ_MACHINE_EXTERNAL
+  } InterruptCauseE;
+
+  typedef enum logic {
+    UART_MODE_DMA,
+    UART_MODE_CPU
+  } UartModeE;
 
   function automatic logic IsSupportedCsrAddr(input logic [11:0] iCsrAddr);
     begin
@@ -365,9 +385,19 @@ package rv32i_pkg;
     end
   endfunction
 
+  function automatic logic [31:0] InterruptCauseToMcause(input InterruptCauseE iIrqCause);
+    begin
+      unique case (iIrqCause)
+        IRQ_MACHINE_TIMER:    InterruptCauseToMcause = LP_MCAUSE_MACHINE_TIMER_INT;
+        IRQ_MACHINE_EXTERNAL: InterruptCauseToMcause = LP_MCAUSE_MACHINE_EXT_INT;
+        default:              InterruptCauseToMcause = 32'd0;
+      endcase
+    end
+  endfunction
+
   function automatic logic [31:0] ByteWriteMerge(
     input logic [31:0] iPrevData,
-    input logic [31:0] iWriteData,
+    input logic [31:0] iWrData,
     input logic [3:0]  iByteEn
   );
     logic [31:0] MergedData;
@@ -376,7 +406,7 @@ package rv32i_pkg;
       MergedData = iPrevData;
       for (ByteIdx = 0; ByteIdx < 4; ByteIdx = ByteIdx + 1) begin
         if (iByteEn[ByteIdx]) begin
-          MergedData[(ByteIdx * 8) +: 8] = iWriteData[(ByteIdx * 8) +: 8];
+          MergedData[(ByteIdx * 8) +: 8] = iWrData[(ByteIdx * 8) +: 8];
         end
       end
       ByteWriteMerge = MergedData;

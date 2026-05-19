@@ -1,0 +1,91 @@
+version: 1
+soc:
+  name: RISCV_RV32I_5STAGE
+  xlen: 32
+  default_baud: 115200
+memory:
+  boot_rom:
+    base: 0x00000000
+    size: 0x00001000
+    buses: [instr]
+    executable: true
+    writable: false
+    init_file: src/timing_programs/uart_bootrom.mem
+  program_ram:
+    base: 0x00001000
+    size: 0x0000F000
+    buses: [instr, inst_dma]
+    executable: true
+    writable_by: [inst_dma]
+    inst_dma_default: true
+  data_ram:
+    base: 0x00000000
+    size: 0x00000400
+    buses: [data]
+    executable: false
+    writable: true
+data_bus:
+  interconnect: DataBusInterconnect
+  targets:
+    data_ram:
+      kind: direct_ram
+      base: 0x00000000
+      size: 0x00000400
+      writable: true
+    apb_mmio:
+      kind: axi_lite_to_apb
+      base: 0x40000000
+      size: 0x00010000
+      writable: true
+  forbidden_targets:
+    program_ram_write: true
+apb:
+  base: 0x40000000
+  size: 0x00010000
+  window_size: 0x1000
+peripherals:
+  uart0:
+    base: 0x40000000
+    size: 0x1000
+    module: APB_UART
+    irq:
+      rx: 2
+  gpio0:
+    base: 0x40001000
+    size: 0x1000
+    module: APB_GPIO
+    irq:
+      gpio: 1
+  i2c0:
+    base: 0x40002000
+    size: 0x1000
+    module: APB_I2C
+    irq:
+      event: 3
+      error: 4
+  intc0:
+    base: 0x40003000
+    size: 0x1000
+    module: InterruptController
+  spi0:
+    base: 0x40004000
+    size: 0x1000
+    module: APB_SPI
+    irq:
+      event: 5
+      error: 6
+  fnd0:
+    base: 0x40005000
+    size: 0x1000
+    module: APB_FND
+  timer0:
+    base: 0x40006000
+    size: 0x1000
+    module: APB_Timer
+    irq:
+      machine_timer: true
+  inst_dma0:
+    base: 0x40007000
+    size: 0x1000
+    module: InstDmaRegs
+    controls: inst_dma0

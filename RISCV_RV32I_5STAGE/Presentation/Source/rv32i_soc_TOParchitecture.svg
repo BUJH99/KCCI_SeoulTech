@@ -1,0 +1,328 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 850" width="100%" height="100%" style="background-color: #FFFFFF; font-family: 'Pretendard', sans-serif;">
+          
+          <rect x="0" y="0" width="1800" height="850" fill="#FFFFFF" />
+          
+          <defs>
+            <marker id="arrow-end" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path d="M 0 0 L 8 4 L 0 8 Z" fill="#475467" />
+            </marker>
+            <marker id="arrow-start" markerWidth="8" markerHeight="8" refX="1" refY="4" orient="auto">
+              <path d="M 8 0 L 0 4 L 8 8 Z" fill="#475467" />
+            </marker>
+            <marker id="arrow-end-irq" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path d="M 0 0 L 8 4 L 0 8 Z" fill="#D9480F" />
+            </marker>
+            <marker id="arrow-end-irq-thick" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+              <path d="M 0 0 L 6 3 L 0 6 Z" fill="#D9480F" />
+            </marker>
+            <marker id="arrow-end-ctrl" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+              <path d="M 0 0 L 6 3 L 0 6 Z" fill="#94A3B8" />
+            </marker>
+            <marker id="arrow-end-trap" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+              <path d="M 0 0 L 6 3 L 0 6 Z" fill="#F59E0B" />
+            </marker>
+            <marker id="arrow-end-mmio" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto">
+              <path d="M 0 0 L 6 3 L 0 6 Z" fill="#0284C7" />
+            </marker>
+            <filter id="shadow" x="-5%" y="-5%" width="110%" height="110%">
+              <feDropShadow dx="2" dy="4" stdDeviation="4" flood-color="#1E293B" flood-opacity="0.1"/>
+            </filter>
+          </defs>
+
+          <!-- 제목 -->
+          <text x="900" y="35" font-size="24" font-weight="700" fill="#1E293B" text-anchor="middle" letter-spacing="0.5">RV32I 5-Stage SoC Architecture</text>
+
+          <!-- ========================================== -->
+          <!-- SYSTEM CLOCK &amp; ROM                         -->
+          <!-- ========================================== -->
+          <g transform="translate(40, 20)">
+            <rect x="0" y="0" width="160" height="40" rx="4" fill="#F8FAFC" stroke="#CBD5E1" stroke-width="1.5" />
+            <text x="80" y="25" font-size="13" font-weight="600" fill="#334155" text-anchor="middle">SysClockDivider</text>
+          </g>
+
+          <g transform="translate(40, 80)">
+            <rect x="0" y="0" width="120" height="60" fill="#E9EDF2" stroke="#94A3B8" stroke-width="1.5" />
+            <text x="60" y="28" font-size="15" font-weight="600" fill="#1E293B" text-anchor="middle">InstrRom</text>
+            <text x="60" y="46" font-size="11" fill="#475467" text-anchor="middle">Inst. Memory</text>
+          </g>
+
+          <!-- ========================================== -->
+          <!-- RV32I CORE                                 -->
+          <!-- ========================================== -->
+          <g transform="translate(40, 190)">
+            <rect x="0" y="0" width="470" height="320" rx="4" fill="#3661A0" filter="url(#shadow)" />
+            
+            <text x="235" y="25" font-size="18" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.5">RV32ICORE</text>
+            <text x="235" y="42" font-size="11" font-weight="400" fill="#E2E8F0" text-anchor="middle">5-Stage Pipeline</text>
+
+            <!-- PipeFlowCtrl -->
+            <rect x="15" y="90" width="85" height="35" rx="2" fill="#1E293B" stroke="#475467" stroke-width="1" />
+            <text x="57.5" y="112" font-size="11" font-weight="600" fill="#FFFFFF" text-anchor="middle">PipeFlowCtrl</text>
+
+            <!-- CsrFile -->
+            <rect x="150" y="90" width="70" height="35" rx="2" fill="#1E293B" stroke="#475467" stroke-width="1" />
+            <text x="185" y="112" font-size="11" font-weight="600" fill="#FFFFFF" text-anchor="middle">CsrFile</text>
+
+            <!-- TrapController -->
+            <rect x="250" y="70" width="120" height="75" rx="2" fill="#1E293B" stroke="#475467" stroke-width="1" />
+            <text x="310" y="88" font-size="12" font-weight="600" fill="#FFFFFF" text-anchor="middle">TrapController</text>
+            <text x="310" y="105" font-size="9" fill="#94A3B8" text-anchor="middle">MEM > EX > ID</text>
+            <text x="310" y="120" font-size="9" fill="#94A3B8" text-anchor="middle">Vector/IRQ Ctrl</text>
+
+            <!-- Pipeline Stages -->
+            <line x1="10" y1="222.5" x2="400" y2="222.5" stroke="#FFFFFF" stroke-width="3" />
+
+            <rect x="12" y="185" width="56" height="75" fill="#F8FAFC" stroke="#94A3B8" stroke-width="1.5" />
+            <text x="40" y="218" font-size="14" font-weight="700" fill="#0F172A" text-anchor="middle">IF</text>
+            <text x="40" y="240" font-size="11" fill="#475569" text-anchor="middle">Stage</text>
+            
+            <rect x="76" y="185" width="12" height="75" fill="#94A3B8" />
+
+            <rect x="96" y="185" width="56" height="75" fill="#F8FAFC" stroke="#94A3B8" stroke-width="1.5" />
+            <text x="124" y="218" font-size="14" font-weight="700" fill="#0F172A" text-anchor="middle">ID</text>
+            <text x="124" y="240" font-size="11" fill="#475569" text-anchor="middle">Stage</text>
+
+            <rect x="160" y="185" width="12" height="75" fill="#94A3B8" />
+
+            <rect x="180" y="185" width="56" height="75" fill="#F8FAFC" stroke="#94A3B8" stroke-width="1.5" />
+            <text x="208" y="218" font-size="14" font-weight="700" fill="#0F172A" text-anchor="middle">EX</text>
+            <text x="208" y="240" font-size="10" fill="#475569" text-anchor="middle">ALU/Branch</text>
+
+            <rect x="244" y="185" width="12" height="75" fill="#94A3B8" />
+
+            <rect x="264" y="185" width="56" height="75" fill="#F8FAFC" stroke="#94A3B8" stroke-width="1.5" />
+            <text x="292" y="218" font-size="14" font-weight="700" fill="#0F172A" text-anchor="middle">MEM</text>
+            <text x="292" y="240" font-size="11" fill="#475569" text-anchor="middle">LSU</text>
+
+            <rect x="328" y="185" width="12" height="75" fill="#94A3B8" />
+
+            <rect x="348" y="185" width="56" height="75" fill="#F8FAFC" stroke="#94A3B8" stroke-width="1.5" />
+            <text x="376" y="218" font-size="14" font-weight="700" fill="#0F172A" text-anchor="middle">WB</text>
+            <text x="376" y="240" font-size="11" fill="#475569" text-anchor="middle">Retire</text>
+
+            <!-- Internal Control Flow -->
+            <path d="M 57.5 125 L 57.5 165 L 82 165 L 82 184" fill="none" stroke="#94A3B8" stroke-width="1.5" stroke-dasharray="2 2" marker-end="url(#arrow-end-ctrl)" />
+            <path d="M 57.5 165 L 166 165 L 166 184" fill="none" stroke="#94A3B8" stroke-width="1.5" stroke-dasharray="2 2" marker-end="url(#arrow-end-ctrl)" />
+            <path d="M 166 165 L 250 165 L 250 184" fill="none" stroke="#94A3B8" stroke-width="1.5" stroke-dasharray="2 2" marker-end="url(#arrow-end-ctrl)" />
+            
+            <path d="M 310 70 L 310 55 L 57.5 55 L 57.5 90" fill="none" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="2 2" marker-end="url(#arrow-end-trap)" />
+
+            <path d="M 40 125 L 40 184" fill="none" stroke="#F59E0B" stroke-width="1.5" stroke-dasharray="2 2" marker-end="url(#arrow-end-trap)" />
+
+            <line x1="185" y1="125" x2="208" y2="184" stroke="#94A3B8" stroke-width="1.5" stroke-dasharray="2 2" marker-end="url(#arrow-end-ctrl)" />
+
+            <line x1="250" y1="107.5" x2="220" y2="107.5" stroke="#94A3B8" stroke-width="1.5" stroke-dasharray="2 2" marker-end="url(#arrow-end-ctrl)" marker-start="url(#arrow-end-ctrl)" />
+
+            <!-- Ext IRQ Port (수신부 세로 길이 연장: Y 80~210) -->
+            <rect x="460" y="80" width="10" height="130" fill="#D9480F" />
+            <text x="455" y="150" font-size="10" font-weight="600" fill="#FFFFFF" text-anchor="end">IRQ In</text>
+
+            <!-- Internal Core IRQ Routing -->
+            <!-- 1. ExtIrqPending -->
+            <path d="M 460 135 L 410 135 L 410 45 L 185 45 L 185 90" fill="none" stroke="#D9480F" stroke-width="1.5" stroke-dasharray="2 2" marker-end="url(#arrow-end-irq)" />
+            <path d="M 410 95 L 370 95" fill="none" stroke="#D9480F" stroke-width="1.5" stroke-dasharray="2 2" marker-end="url(#arrow-end-irq)" />
+
+            <!-- 2. VectorValid/Pc -->
+            <path d="M 460 185 L 390 185 L 390 125 L 370 125" fill="none" stroke="#D9480F" stroke-width="1.5" stroke-dasharray="2 2" marker-end="url(#arrow-end-irq)" />
+          </g>
+
+          <line x1="105" y1="190" x2="105" y2="140" stroke="#475467" stroke-width="1.5" marker-end="url(#arrow-end)" />
+          <line x1="135" y1="140" x2="135" y2="190" stroke="#475467" stroke-width="1.5" marker-end="url(#arrow-end)" />
+
+          <!-- ========================================== -->
+          <!-- DATA BUS MASTER &amp; MATRIX                   -->
+          <!-- ========================================== -->
+          <g transform="translate(40, 550)">
+            <rect x="0" y="0" width="500" height="44" fill="#D1D6DE" stroke="#94A3B8" stroke-width="1.5" />
+            <text x="250" y="27" font-size="16" font-weight="700" fill="#1E293B" text-anchor="middle">Data Bus Master / Bus Matrix</text>
+          </g>
+
+          <line x1="240" y1="510" x2="240" y2="550" stroke="#475467" stroke-width="1.5" marker-end="url(#arrow-end)" />
+          <line x1="270" y1="550" x2="270" y2="510" stroke="#475467" stroke-width="1.5" marker-end="url(#arrow-end)" />
+
+          <g transform="translate(180, 660)">
+            <rect x="0" y="0" width="140" height="60" fill="#E9EDF2" stroke="#94A3B8" stroke-width="1.5" />
+            <text x="70" y="28" font-size="15" font-weight="600" fill="#1E293B" text-anchor="middle">DataRam</text>
+            <text x="70" y="46" font-size="11" fill="#475467" text-anchor="middle">SRAM (Data/BSS)</text>
+          </g>
+
+          <line x1="230" y1="594" x2="230" y2="660" stroke="#475467" stroke-width="1.5" marker-end="url(#arrow-end)" />
+          <line x1="270" y1="660" x2="270" y2="594" stroke="#475467" stroke-width="1.5" marker-end="url(#arrow-end)" />
+
+          <g transform="translate(380, 660)">
+            <rect x="0" y="0" width="180" height="60" fill="#E9EDF2" stroke="#94A3B8" stroke-width="1.5" />
+            <text x="90" y="28" font-size="14" font-weight="600" fill="#1E293B" text-anchor="middle">AxiLiteToApbBridge</text>
+            <text x="90" y="46" font-size="11" fill="#475467" text-anchor="middle">Memory Mapped I/O</text>
+          </g>
+
+          <line x1="450" y1="594" x2="450" y2="660" stroke="#475467" stroke-width="1.5" marker-end="url(#arrow-end)" />
+          <line x1="490" y1="660" x2="490" y2="594" stroke="#475467" stroke-width="1.5" marker-end="url(#arrow-end)" />
+
+          <!-- ========================================== -->
+          <!-- EXPLICIT MMIO TRACE (Core -> INTC)         -->
+          <!-- ========================================== -->
+          <g stroke="#0284C7" stroke-width="2.5" stroke-dasharray="5 3" fill="none">
+            <!-- 1. Core -> Bus Matrix Top (Stops right before boundary) -->
+            <path d="M 315 510 L 315 548" marker-end="url(#arrow-end-mmio)" />
+            
+            <!-- 2. Bus Matrix Bottom -> AXI-Lite Top (Starts right after boundary) -->
+            <path d="M 450 596 L 450 658" marker-end="url(#arrow-end-mmio)" />
+
+            <!-- 3. AXI-Lite Right -> APB Bus Left (Shifted APB Bus closer to INTC) -->
+            <path d="M 560 690 L 1118 690" marker-end="url(#arrow-end-mmio)" />
+
+            <!-- 4. APB Bus Left -> INTC Right -->
+            <path d="M 1120 320 L 992 320" marker-end="url(#arrow-end-mmio)" />
+          </g>
+
+          <text x="325" y="535" font-size="11" font-weight="700" fill="#0284C7">Native Bus</text>
+          <text x="440" y="630" font-size="11" font-weight="700" fill="#0284C7" text-anchor="end">AXI-Lite</text>
+
+          <text x="840" y="682" font-size="13" font-weight="700" fill="#1E293B" text-anchor="middle">APB DataBus</text>
+          <text x="840" y="705" font-size="11" font-weight="700" fill="#0284C7" text-anchor="middle">MMIO Read/Write Path</text>
+          <text x="1056" y="313" font-size="11" font-weight="700" fill="#0284C7" text-anchor="middle">APB to INTC (MMIO)</text>
+
+
+          <!-- ========================================== -->
+          <!-- DETAILED INTERRUPT CONTROLLER (INTC)       -->
+          <!-- ========================================== -->
+          <g transform="translate(650, 170)">
+            <rect x="0" y="0" width="340" height="240" rx="6" fill="#F8FAFC" stroke="#64748B" stroke-width="1.5" />
+            <text x="170" y="20" font-size="14" font-weight="700" fill="#1E293B" text-anchor="middle">InterruptController (INTC)</text>
+
+            <rect x="15" y="35" width="130" height="40" rx="3" fill="#FFFFFF" stroke="#94A3B8" stroke-width="1.5" />
+            <text x="80" y="52" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">IntcGateway</text>
+            <text x="80" y="67" font-size="9" fill="#64748B" text-anchor="middle">level IRQ to set pulse</text>
+
+            <rect x="15" y="85" width="130" height="40" rx="3" fill="#FFFFFF" stroke="#94A3B8" stroke-width="1.5" />
+            <text x="80" y="102" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">IntcPendingCtrl</text>
+            <text x="80" y="117" font-size="9" fill="#64748B" text-anchor="middle">pending + in-service</text>
+
+            <rect x="15" y="135" width="130" height="40" rx="3" fill="#FFFFFF" stroke="#94A3B8" stroke-width="1.5" />
+            <text x="80" y="152" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">IntcPriorityClaim</text>
+            <text x="80" y="167" font-size="9" fill="#64748B" text-anchor="middle">enable, priority, thresh</text>
+
+            <rect x="15" y="185" width="130" height="40" rx="3" fill="#FFFFFF" stroke="#94A3B8" stroke-width="1.5" />
+            <text x="80" y="202" font-size="12" font-weight="600" fill="#1E293B" text-anchor="middle">IntcVectorTable</text>
+            <text x="80" y="217" font-size="9" fill="#64748B" text-anchor="middle">per-source handler PC</text>
+
+            <rect x="190" y="35" width="135" height="190" rx="3" fill="#FFFFFF" stroke="#94A3B8" stroke-width="1.5" />
+            <text x="257" y="55" font-size="13" font-weight="600" fill="#1E293B" text-anchor="middle">IntcRegIf</text>
+            <text x="257" y="85" font-size="10" font-weight="500" fill="#475467" text-anchor="middle">PENDING / ENABLE</text>
+            <text x="257" y="105" font-size="10" font-weight="500" fill="#475467" text-anchor="middle">CLAIM / COMPLETE</text>
+            <text x="257" y="125" font-size="10" font-weight="500" fill="#475467" text-anchor="middle">PRIORITY / THRESH</text>
+            <text x="257" y="145" font-size="10" font-weight="500" fill="#475467" text-anchor="middle">VECTOR entries</text>
+            <text x="257" y="195" font-size="11" font-weight="700" fill="#D9480F" text-anchor="middle">APB Register I/F</text>
+
+            <line x1="80" y1="75" x2="80" y2="85" stroke="#475467" stroke-width="1.5" marker-end="url(#arrow-end)" />
+            <text x="85" y="82" font-size="9" fill="#475467">pulse</text>
+
+            <line x1="80" y1="125" x2="80" y2="135" stroke="#475467" stroke-width="1.5" marker-end="url(#arrow-end)" />
+            <text x="85" y="132" font-size="9" fill="#475467">PendingVec</text>
+
+            <line x1="80" y1="175" x2="80" y2="185" stroke="#475467" stroke-width="1.5" marker-end="url(#arrow-end)" />
+            <text x="85" y="182" font-size="9" fill="#475467">SourceId</text>
+
+            <path d="M 190 55 L 145 55" fill="none" stroke="#475467" stroke-width="1" stroke-dasharray="2 2" marker-end="url(#arrow-end-ctrl)" />
+            <text x="167" y="48" font-size="8" fill="#475467" text-anchor="middle">COMPLETE</text>
+
+            <path d="M 190 105 L 145 105" fill="none" stroke="#475467" stroke-width="1" stroke-dasharray="2 2" marker-end="url(#arrow-end-ctrl)" />
+            <text x="167" y="98" font-size="8" fill="#475467" text-anchor="middle">CLAIM</text>
+
+            <path d="M 190 155 L 145 155" fill="none" stroke="#475467" stroke-width="1" stroke-dasharray="2 2" marker-end="url(#arrow-end-ctrl)" />
+            <text x="167" y="148" font-size="8" fill="#475467" text-anchor="middle">ena/prio</text>
+          </g>
+
+          <!-- ========================================== -->
+          <!-- CORE <-> INTC LINES (Perfectly Separated)  -->
+          <!-- ========================================== -->
+          <g font-size="11" font-weight="700" fill="#D9480F">
+            <!-- 1. ExtIrqPending (Y=325) -->
+            <line x1="650" y1="325" x2="510" y2="325" stroke="#D9480F" stroke-width="3" marker-end="url(#arrow-end-irq-thick)" />
+            <text x="580" y="315" text-anchor="middle">ExtIrqPending</text>
+
+            <!-- 2. VectorValid/Pc (Y=375) -->
+            <line x1="650" y1="375" x2="510" y2="375" stroke="#D9480F" stroke-width="3" marker-end="url(#arrow-end-irq-thick)" />
+            <text x="580" y="365" text-anchor="middle">VectorValid/Pc</text>
+          </g>
+
+
+          <!-- ========================================== -->
+          <!-- APB BUS &amp; PERIPHERALS (Closer to INTC, extended down to cover APB DataBus) -->
+          <!-- ========================================== -->
+          <g transform="translate(1120, 250)">
+            <rect x="0" y="0" width="46" height="490" fill="#D1D6DE" stroke="#94A3B8" stroke-width="1.5" />
+            <text x="23" y="245" font-size="16" font-weight="700" fill="#1E293B" text-anchor="middle" transform="rotate(-90 23 245)">APB Peripheral Bus</text>
+          </g>
+
+          <g transform="translate(1200, 310)">
+            <g transform="translate(0, 0)">
+              <rect x="0" y="0" width="160" height="50" fill="#F8FAFC" stroke="#64748B" stroke-width="1.5" />
+              <text x="80" y="30" font-size="14" font-weight="600" fill="#1E293B" text-anchor="middle">APB_UART</text>
+            </g>
+            <g transform="translate(0, 70)">
+              <rect x="0" y="0" width="160" height="50" fill="#F8FAFC" stroke="#64748B" stroke-width="1.5" />
+              <text x="80" y="30" font-size="14" font-weight="600" fill="#1E293B" text-anchor="middle">APB_GPIO</text>
+            </g>
+            <g transform="translate(0, 140)">
+              <rect x="0" y="0" width="160" height="50" fill="#F8FAFC" stroke="#64748B" stroke-width="1.5" />
+              <text x="80" y="30" font-size="14" font-weight="600" fill="#1E293B" text-anchor="middle">APB_I2C</text>
+            </g>
+            <g transform="translate(0, 210)">
+              <rect x="0" y="0" width="160" height="50" fill="#F8FAFC" stroke="#64748B" stroke-width="1.5" />
+              <text x="80" y="30" font-size="14" font-weight="600" fill="#1E293B" text-anchor="middle">APB_SPI</text>
+            </g>
+            <g transform="translate(0, 280)">
+              <rect x="0" y="0" width="160" height="50" fill="#F8FAFC" stroke="#64748B" stroke-width="1.5" />
+              <text x="80" y="30" font-size="14" font-weight="600" fill="#1E293B" text-anchor="middle">APB_FND</text>
+            </g>
+            <g transform="translate(0, 350)">
+              <rect x="0" y="0" width="160" height="50" fill="#F8FAFC" stroke="#64748B" stroke-width="1.5" />
+              <text x="80" y="30" font-size="14" font-weight="600" fill="#1E293B" text-anchor="middle">APB_TIMER</text>
+            </g>
+          </g>
+
+          <path d="M 1166 335 L 1200 335
+                   M 1166 405 L 1200 405
+                   M 1166 475 L 1200 475
+                   M 1166 545 L 1200 545
+                   M 1166 615 L 1200 615
+                   M 1166 685 L 1200 685" 
+                stroke="#475467" stroke-width="2" marker-end="url(#arrow-end)" marker-start="url(#arrow-start)" />
+
+          <!-- External Pads -->
+          <g font-size="12" font-weight="500" fill="#1E293B">
+            <line x1="1360" y1="335" x2="1400" y2="335" stroke="#475467" stroke-width="1.5" />
+            <text x="1410" y="339">iUartRx, oUartTx</text>
+            <line x1="1360" y1="405" x2="1400" y2="405" stroke="#475467" stroke-width="1.5" />
+            <text x="1410" y="409">iGpioIn, oGpioOut</text>
+            <line x1="1360" y1="475" x2="1400" y2="475" stroke="#475467" stroke-width="1.5" />
+            <text x="1410" y="479">ioI2cScl, ioI2cSda</text>
+            <line x1="1360" y1="545" x2="1400" y2="545" stroke="#475467" stroke-width="1.5" />
+            <text x="1410" y="549">oSpiMosi/Sclk/CsN</text>
+            <line x1="1360" y1="615" x2="1400" y2="615" stroke="#475467" stroke-width="1.5" marker-end="url(#arrow-end)" />
+            <text x="1410" y="619">oSeg, oDp, oDigitSel</text>
+            <line x1="1360" y1="685" x2="1400" y2="685" stroke="#475467" stroke-width="1.5" marker-end="url(#arrow-end)" />
+            <text x="1410" y="689">timer_irq, mtimecmp</text>
+          </g>
+
+          <!-- ========================================== -->
+          <!-- PERIPHERAL IRQ GATHERING -> INTC           -->
+          <!-- ========================================== -->
+          <path d="M 1200 345 L 1180 345
+                   M 1200 415 L 1180 415
+                   M 1200 485 L 1180 485
+                   M 1200 555 L 1180 555
+                   M 1200 625 L 1180 625
+                   M 1200 695 L 1180 695" 
+                stroke="#D9480F" stroke-width="1.5" stroke-dasharray="3 3" />
+          
+          <!-- 충돌 및 겹침이 전혀 없도록 INTC 좌측면(X=620)으로 우회하여 진입(X=665)하는 최적 라우팅 -->
+          <path d="M 1180 695 L 1180 120 L 620 120 L 620 225 L 665 225" 
+                fill="none" stroke="#D9480F" stroke-width="2" stroke-dasharray="3 3" marker-end="url(#arrow-end-irq)" />
+          
+          <rect x="940" y="110" width="100" height="20" fill="#ffffff" />
+          <text x="990" y="124" font-size="12" font-weight="700" fill="#D9480F" text-anchor="middle">IntcIrqVec[5:0]</text>
+
+        </svg>

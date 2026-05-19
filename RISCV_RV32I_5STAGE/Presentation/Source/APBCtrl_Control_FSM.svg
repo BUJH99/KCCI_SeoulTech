@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" width="1000" height="1000">
+  <defs>
+    <!-- Academic Standard Solid Arrow -->
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#000000" />
+    </marker>
+  </defs>
+
+  <style>
+    /* 학술지 스타일 CSS (Black &amp; White, Crisp Lines) */
+    .state-node { fill: #ffffff; stroke: #000000; stroke-width: 2.5px; }
+    .state-text { font-family: 'Arial', sans-serif; font-weight: bold; font-size: 15px; fill: #000000; text-anchor: middle; }
+
+    .edge-solid { fill: none; stroke: #000000; stroke-width: 1.5px; marker-end: url(#arrow); }
+
+    .edge-label {
+        font-family: 'Arial', sans-serif;
+        font-size: 16px;
+        font-weight: normal;
+        fill: #000000;
+        text-anchor: middle;
+        paint-order: stroke;
+        stroke: #ffffff;
+        stroke-width: 7px;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+    .title-text { font-family: 'Arial', sans-serif; font-weight: bold; font-size: 22px; fill: #000000; text-anchor: middle; }
+  </style>
+
+
+  <!-- ==================== TRANSITION EDGES ==================== -->
+  <!-- 좌표 계산: 3개 노드(정삼각형 배치) - IDLE(500, 250), SETUP(750, 650), ACCESS(250, 650) -->
+  <!-- 화살표가 반경 100px 원의 테두리에 정확히 닿도록 삼각함수로 이격 거리 최적화 계산 -->
+
+  <!-- 1. IDLE -> SETUP -->
+  <!-- Start(553, 335) -> End(697, 565) -->
+  <path class="edge-solid" d="M 553 335 L 697 565" />
+
+  <!-- 2. SETUP -> ACCESS -->
+  <!-- Start(650, 650) -> End(350, 650) -->
+  <path class="edge-solid" d="M 650 650 L 350 650" />
+
+  <!-- 3. ACCESS -> IDLE -->
+  <!-- Start(303, 565) -> End(447, 335) -->
+  <path class="edge-solid" d="M 303 565 L 447 335" />
+
+  <!-- ==================== STATE NODES (PERFECT CIRCLES, R=100) ==================== -->
+
+  <!-- 1. IDLE (Top Center) -->
+  <g transform="translate(500, 250)">
+    <circle class="state-node" cx="0" cy="0" r="100" />
+    <text class="state-text" x="0" y="-8">LP_APB_STATE_</text>
+    <text class="state-text" x="0" y="16">IDLE</text>
+  </g>
+
+  <!-- 2. SETUP (Bottom Right) -->
+  <g transform="translate(750, 650)">
+    <circle class="state-node" cx="0" cy="0" r="100" />
+    <text class="state-text" x="0" y="-8">LP_APB_STATE_</text>
+    <text class="state-text" x="0" y="16">SETUP</text>
+  </g>
+
+  <!-- 3. ACCESS (Bottom Left) -->
+  <g transform="translate(250, 650)">
+    <circle class="state-node" cx="0" cy="0" r="100" />
+    <text class="state-text" x="0" y="-8">LP_APB_STATE_</text>
+    <text class="state-text" x="0" y="16">ACCESS</text>
+  </g>
+
+  <!-- ==================== TRANSITION LABELS ==================== -->
+
+  <!-- IDLE -> SETUP -->
+  <text class="edge-label" x="655" y="440">iApbSel</text>
+
+  <!-- SETUP -> ACCESS -->
+  <text class="edge-label" x="500" y="685">(1 Cycle)</text>
+
+  <!-- ACCESS -> IDLE -->
+  <text class="edge-label" x="345" y="440">iAccessComplete</text>
+</svg>

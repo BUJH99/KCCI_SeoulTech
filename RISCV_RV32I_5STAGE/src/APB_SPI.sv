@@ -1,11 +1,11 @@
 /*
 [MODULE_INFO_START]
 Name: APB_SPI
-Role: APB SPI master peripheral with event and error interrupt outputs
+Role: APB SPI master peripheral with v1 frame FIFO and interrupt outputs
 Summary:
-  - Delegates register decode and sticky IRQ cause tracking to SpiRegs
-  - Delegates compact frame transfer timing and SPI pin drive to SpiCore
-  - Separates event and error IRQ outputs for PLIC-lite routing
+  - Delegates APB register decode, TX/RX FIFOs, and sticky IRQ tracking to SpiRegs
+  - Delegates SPI mode0 frame timing and external pin drive to SpiCore
+  - Keeps event and error IRQ outputs separated for PLIC-lite routing
 [MODULE_INFO_END]
 */
 
@@ -13,7 +13,7 @@ Summary:
 
 module APB_SPI (
   input  logic        iClk,
-  input  logic        iRstn,
+  input  logic        iRst,
   input  logic        iPsel,
   input  logic        iPenable,
   input  logic        iPwrite,
@@ -29,35 +29,35 @@ module APB_SPI (
   output logic        oMosi,
   output logic        oCsN,
   output logic        oEventIrq,
-  output logic        oErrorIrq
+  output logic        oErrIrq
 );
 
   logic        AccessEn;
-  logic        CtrlEnable;
+  logic        CtrlEn;
   logic        CtrlStartPulse;
   logic        CtrlCpol;
   logic        CtrlCpha;
   logic        CtrlLsbFirst;
-  logic        CtrlManualCs;
-  logic [7:0]  TxData;
   logic [15:0] ClkDiv;
-  logic [7:0]  CsMask;
+  logic [7:0]  CsCtrl;
+  logic [7:0]  FrameLen;
   logic        CoreBusy;
   logic        CoreDonePulse;
-  logic        CoreRxValidPulse;
-  logic        CoreTxReady;
-  logic [7:0]  CoreRxData;
-  logic        CoreRxOverflowPulse;
   logic        CoreTxUnderflowPulse;
-  logic        CoreModeErrorPulse;
+  logic        CoreModeErrPulse;
   logic        CoreFrameDroppedPulse;
+  logic [7:0]  TxFifoData;
+  logic        TxFifoValid;
+  logic        TxFifoPopPulse;
+  logic [7:0]  RxFifoPushData;
+  logic        RxFifoPushPulse;
 
   assign oPready  = 1'b1;
   assign AccessEn = iPsel && iPenable && oPready;
 
   SpiRegs uSpiRegs (
     .iClk               (iClk),
-    .iRstn              (iRstn),
+    .iRst              (iRst),
     .iAccessEn          (AccessEn),
     .iPwrite            (iPwrite),
     .iPaddr             (iPaddr),
@@ -65,49 +65,49 @@ module APB_SPI (
     .iPwdata            (iPwdata),
     .iBusy              (CoreBusy),
     .iDonePulse         (CoreDonePulse),
-    .iRxValidPulse      (CoreRxValidPulse),
-    .iTxReady           (CoreTxReady),
-    .iRxData            (CoreRxData),
-    .iRxOverflowPulse   (CoreRxOverflowPulse),
     .iTxUnderflowPulse  (CoreTxUnderflowPulse),
-    .iModeErrorPulse    (CoreModeErrorPulse),
+    .iModeErrPulse    (CoreModeErrPulse),
     .iFrameDroppedPulse (CoreFrameDroppedPulse),
+    .iTxFifoPopPulse    (TxFifoPopPulse),
+    .iRxFifoPushPulse   (RxFifoPushPulse),
+    .iRxFifoPushData    (RxFifoPushData),
     .oPrdata            (oPrdata),
     .oPslverr           (oPslverr),
-    .oCtrlEnable        (CtrlEnable),
+    .oCtrlEn        (CtrlEn),
     .oCtrlStartPulse    (CtrlStartPulse),
     .oCtrlCpol          (CtrlCpol),
     .oCtrlCpha          (CtrlCpha),
     .oCtrlLsbFirst      (CtrlLsbFirst),
-    .oCtrlManualCs      (CtrlManualCs),
-    .oTxData            (TxData),
     .oClkDiv            (ClkDiv),
-    .oCsMask            (CsMask),
+    .oCsCtrl            (CsCtrl),
+    .oFrameLen          (FrameLen),
+    .oTxFifoData        (TxFifoData),
+    .oTxFifoValid       (TxFifoValid),
     .oEventIrq          (oEventIrq),
-    .oErrorIrq          (oErrorIrq)
+    .oErrIrq          (oErrIrq)
   );
 
   SpiCore uSpiCore (
     .iClk               (iClk),
-    .iRstn              (iRstn),
-    .iEnable            (CtrlEnable),
+    .iRst              (iRst),
+    .iEn            (CtrlEn),
     .iStartPulse        (CtrlStartPulse),
     .iCpol              (CtrlCpol),
     .iCpha              (CtrlCpha),
     .iLsbFirst          (CtrlLsbFirst),
-    .iManualCs          (CtrlManualCs),
-    .iTxData            (TxData),
+    .iFrameLen          (FrameLen),
     .iClkDiv            (ClkDiv),
-    .iCsMask            (CsMask),
+    .iCsCtrl            (CsCtrl),
+    .iTxFifoData        (TxFifoData),
+    .iTxFifoValid       (TxFifoValid),
     .iMiso              (iMiso),
     .oBusy              (CoreBusy),
     .oDonePulse         (CoreDonePulse),
-    .oRxValidPulse      (CoreRxValidPulse),
-    .oTxReady           (CoreTxReady),
-    .oRxData            (CoreRxData),
-    .oRxOverflowPulse   (CoreRxOverflowPulse),
+    .oTxFifoPopPulse    (TxFifoPopPulse),
+    .oRxFifoPushData    (RxFifoPushData),
+    .oRxFifoPushPulse   (RxFifoPushPulse),
     .oTxUnderflowPulse  (CoreTxUnderflowPulse),
-    .oModeErrorPulse    (CoreModeErrorPulse),
+    .oModeErrPulse    (CoreModeErrPulse),
     .oFrameDroppedPulse (CoreFrameDroppedPulse),
     .oSclk              (oSclk),
     .oMosi              (oMosi),

@@ -15,11 +15,11 @@ module IntcPendingCtrl #(
   parameter int unsigned P_NUM_SOURCES = rv32i_pkg::LP_INTC_NUM_SOURCES
 ) (
   input  logic                         iClk,
-  input  logic                         iRstn,
+  input  logic                         iRst,
   input  logic [P_NUM_SOURCES-1:0]     iPendingSetVec,
-  input  logic                         iClaimReadEn,
+  input  logic                         iClaimRdEn,
   input  logic [P_NUM_SOURCES-1:0]     iClaimSelVec,
-  input  logic                         iCompleteWriteEn,
+  input  logic                         iCompleteWrEn,
   input  logic [P_NUM_SOURCES-1:0]     iCompleteSelVec,
 
   output logic [P_NUM_SOURCES-1:0]     oPendingVec,
@@ -29,25 +29,27 @@ module IntcPendingCtrl #(
 
   logic [P_NUM_SOURCES-1:0] PendingVec_d;
   logic [P_NUM_SOURCES-1:0] InServiceVec_d;
+  logic [P_NUM_SOURCES-1:0] ClaimAcceptVec;
 
-  assign oCompleteAcceptVec = iCompleteWriteEn ? (iCompleteSelVec & oInServiceVec) : '0;
+  assign ClaimAcceptVec     = iClaimRdEn ? (iClaimSelVec & oPendingVec) : '0;
+  assign oCompleteAcceptVec = iCompleteWrEn ? (iCompleteSelVec & oInServiceVec) : '0;
 
   always_comb begin
     PendingVec_d   = oPendingVec | iPendingSetVec;
     InServiceVec_d = oInServiceVec;
 
-    if (iClaimReadEn && (iClaimSelVec != '0)) begin
-      PendingVec_d   = PendingVec_d & ~iClaimSelVec;
-      InServiceVec_d = InServiceVec_d | iClaimSelVec;
+    if (ClaimAcceptVec != '0) begin
+      PendingVec_d   = PendingVec_d & ~ClaimAcceptVec;
+      InServiceVec_d = InServiceVec_d | ClaimAcceptVec;
     end
 
-    if (iCompleteWriteEn) begin
+    if (iCompleteWrEn) begin
       InServiceVec_d = InServiceVec_d & ~oCompleteAcceptVec;
     end
   end
 
-  always_ff @(posedge iClk or negedge iRstn) begin
-    if (!iRstn) begin
+  always_ff @(posedge iClk or posedge iRst) begin
+    if (iRst) begin
       oPendingVec   <= '0;
       oInServiceVec <= '0;
     end else begin

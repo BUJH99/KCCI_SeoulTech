@@ -14,7 +14,7 @@ module FwdMux (
   input  logic [31:0]                    iRs1Data,
   input  logic [31:0]                    iRs2Data,
   input  logic [31:0]                    iExMemFwdData,
-  input  logic [31:0]                    iMemWbWriteData,
+  input  logic [31:0]                    iMemWbWrData,
   input  rv32i_pkg::ForwardSelE        iRs1FwdSel,
   input  rv32i_pkg::ForwardSelE        iRs2FwdSel,
 
@@ -29,7 +29,7 @@ module FwdMux (
     unique case (iRs1FwdSel)
       FWD_NONE:   oRs1Data = iRs1Data;
       FWD_EX_MEM: oRs1Data = iExMemFwdData;
-      FWD_MEM_WB: oRs1Data = iMemWbWriteData;
+      FWD_MEM_WB: oRs1Data = iMemWbWrData;
       default:    oRs1Data = iRs1Data;
     endcase
 
@@ -37,7 +37,7 @@ module FwdMux (
     unique case (iRs2FwdSel)
       FWD_NONE:   oRs2Data = iRs2Data;
       FWD_EX_MEM: oRs2Data = iExMemFwdData;
-      FWD_MEM_WB: oRs2Data = iMemWbWriteData;
+      FWD_MEM_WB: oRs2Data = iMemWbWrData;
       default:    oRs2Data = iRs2Data;
     endcase
   end

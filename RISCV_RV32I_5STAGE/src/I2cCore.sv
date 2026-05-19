@@ -1,11 +1,11 @@
 /*
 [MODULE_INFO_START]
 Name: I2cCore
-Role: Compact synthesizable transaction engine for the APB I2C master
+Role: Wrapper for the I2C single-master register transaction engine
 Summary:
-  - Models a bounded master transaction with busy, done, RX-valid, and TX-ready status
-  - Drives SCL/SDA output-enable pins suitable for board-level open-drain adaptation
-  - Emits simple error pulses for disabled starts and overlapping starts
+  - Preserves the APB_I2C-facing I2C core port contract
+  - Wires command latch, transaction control, byte datapath, input sync, and open-drain driver
+  - Keeps APB register policy outside the I2C bus timing core
 [MODULE_INFO_END]
 */
 
@@ -13,91 +13,172 @@ Summary:
 
 module I2cCore (
   input  logic        iClk,
-  input  logic        iRstn,
-  input  logic        iEnable,
+  input  logic        iRst,
+  input  logic        iEn,
   input  logic        iStartPulse,
-  input  logic        iStop,
-  input  logic        iAck,
-  input  logic [7:0]  iTxData,
+  input  logic        iCoreRstPulse,
+  input  logic        iRw,
+  input  logic [6:0]  iSlaveAddr,
+  input  logic [7:0]  iRegAddr,
+  input  logic [31:0] iWdata,
+  input  logic [2:0]  iLen,
   input  logic [15:0] iClkDiv,
-  input  logic [7:0]  iAddr,
   input  logic        iSdaIn,
 
   output logic        oBusy,
   output logic        oDonePulse,
   output logic        oRxValidPulse,
   output logic        oTxReady,
-  output logic [7:0]  oRxData,
+  output logic        oAckOk,
+  output logic [31:0] oRxData,
   output logic        oNackPulse,
   output logic        oArbLostPulse,
-  output logic        oBusErrorPulse,
+  output logic        oBusErrPulse,
+  output logic        oTimeoutPulse,
   output logic        oScl,
+  output logic        oSclOe,
   output logic        oSdaOut,
   output logic        oSdaOe
 );
 
-  localparam int unsigned LP_TRANSACTION_CYCLES = 9;
-
-  logic [3:0] CycleCnt;
-  logic [7:0] ShiftData;
-  logic       SclReg;
+  logic        SdaInSync;
+  logic        StartAttemptPulse;
+  logic        StartAcceptedPulse;
+  logic        InvalidCmdPulse;
+  logic        StartIdleWindow;
+  logic        RwLatch;
+  logic [6:0]  SlaveAddrLatch;
+  logic [7:0]  RegAddrLatch;
+  logic [31:0] WdataLatch;
+  logic [2:0]  LenLatch;
+  logic [15:0] ClkDivLatch;
+  logic        TxBit;
+  logic [2:0]  BitCnt;
+  logic        AckBit;
+  logic [7:0]  RxByteData;
+  logic        RxByteCompletePulse;
+  logic        LoadAddrWrPulse;
+  logic        LoadRegAddrPulse;
+  logic        LoadAddrRdPulse;
+  logic        LoadWrBytePulse;
+  logic [7:0]  WrByteData;
+  logic        PrepareRdPulse;
+  logic        NextRdBytePulse;
+  logic        TxBitAdvancePulse;
+  logic        RxSamplePulse;
+  logic        RxBitAdvancePulse;
+  logic        AckCapturePulse;
+  logic        SclDriveLow;
+  logic        SdaDriveLow;
 
   assign oTxReady = !oBusy;
-  assign oScl     = oBusy ? SclReg : 1'b1;
-  assign oSdaOut  = oBusy ? ShiftData[7] : 1'b1;
-  assign oSdaOe   = oBusy;
 
-  always_ff @(posedge iClk or negedge iRstn) begin
-    if (!iRstn) begin
-      oBusy          <= 1'b0;
-      oDonePulse     <= 1'b0;
-      oRxValidPulse  <= 1'b0;
-      oRxData        <= '0;
-      oNackPulse     <= 1'b0;
-      oArbLostPulse  <= 1'b0;
-      oBusErrorPulse <= 1'b0;
-      CycleCnt       <= '0;
-      ShiftData      <= '0;
-      SclReg         <= 1'b1;
-    end else begin
-      oDonePulse     <= 1'b0;
-      oRxValidPulse  <= 1'b0;
-      oNackPulse     <= 1'b0;
-      oArbLostPulse  <= 1'b0;
-      oBusErrorPulse <= 1'b0;
+  I2cMasterInputSync uI2cMasterInputSync (
+    .iClk       (iClk),
+    .iRst      (iRst),
+    .iSdaIn     (iSdaIn),
+    .oSdaInSync (SdaInSync)
+  );
 
-      if (iStartPulse && !iEnable) begin
-        oBusErrorPulse <= 1'b1;
-      end else if (iStartPulse && oBusy) begin
-        oArbLostPulse <= 1'b1;
-      end else if (iStartPulse) begin
-        oBusy     <= 1'b1;
-        CycleCnt  <= LP_TRANSACTION_CYCLES[3:0];
-        ShiftData <= iTxData;
-        SclReg    <= 1'b0;
-      end else if (oBusy) begin
-        SclReg    <= ~SclReg;
-        ShiftData <= {ShiftData[6:0], iSdaIn};
+  I2cMasterCommandLatch uI2cMasterCommandLatch (
+    .iClk            (iClk),
+    .iRst           (iRst),
+    .iEn         (iEn),
+    .iStartPulse     (iStartPulse),
+    .iBusy           (oBusy),
+    .iStartIdleWindow(StartIdleWindow),
+    .iRw             (iRw),
+    .iSlaveAddr      (iSlaveAddr),
+    .iRegAddr        (iRegAddr),
+    .iWdata          (iWdata),
+    .iLen            (iLen),
+    .iClkDiv         (iClkDiv),
+    .oStartValid     (),
+    .oStartAttemptPulse(StartAttemptPulse),
+    .oStartAcceptedPulse(StartAcceptedPulse),
+    .oInvalidCmdPulse(InvalidCmdPulse),
+    .oRwLatch        (RwLatch),
+    .oSlaveAddrLatch (SlaveAddrLatch),
+    .oRegAddrLatch   (RegAddrLatch),
+    .oWdataLatch     (WdataLatch),
+    .oLenLatch       (LenLatch),
+    .oClkDivLatch    (ClkDivLatch)
+  );
 
-        if (CycleCnt == 4'd0) begin
-          oBusy         <= 1'b0;
-          oDonePulse    <= 1'b1;
-          oRxValidPulse <= iAddr[0];
-          oRxData       <= {iAddr[7:1], iSdaIn};
-          SclReg        <= 1'b1;
-        end else begin
-          CycleCnt <= CycleCnt - 1'b1;
-        end
-      end
+  I2cMasterCtrl uI2cMasterCtrl (
+    .iClk                 (iClk),
+    .iRst                (iRst),
+    .iCoreRstPulse      (iCoreRstPulse),
+    .iStartAttemptPulse   (StartAttemptPulse),
+    .iStartAcceptedPulse  (StartAcceptedPulse),
+    .iInvalidCmdPulse (InvalidCmdPulse),
+    .iRwLatch             (RwLatch),
+    .iLenLatch            (LenLatch),
+    .iClkDivLatch         (ClkDivLatch),
+    .iWdataLatch          (WdataLatch),
+    .iSdaInSync           (SdaInSync),
+    .iTxBit               (TxBit),
+    .iBitCnt              (BitCnt),
+    .iAckBit              (AckBit),
+    .iRxByteData          (RxByteData),
+    .iRxByteCompletePulse (RxByteCompletePulse),
+    .oBusy                (oBusy),
+    .oStartIdleWindow     (StartIdleWindow),
+    .oDonePulse           (oDonePulse),
+    .oRxValidPulse        (oRxValidPulse),
+    .oAckOk               (oAckOk),
+    .oRxData              (oRxData),
+    .oNackPulse           (oNackPulse),
+    .oArbLostPulse        (oArbLostPulse),
+    .oBusErrPulse       (oBusErrPulse),
+    .oTimeoutPulse        (oTimeoutPulse),
+    .oLoadAddrWrPulse     (LoadAddrWrPulse),
+    .oLoadRegAddrPulse    (LoadRegAddrPulse),
+    .oLoadAddrRdPulse     (LoadAddrRdPulse),
+    .oLoadWrBytePulse  (LoadWrBytePulse),
+    .oWrByteData       (WrByteData),
+    .oPrepareRdPulse    (PrepareRdPulse),
+    .oNextRdBytePulse   (NextRdBytePulse),
+    .oTxBitAdvancePulse   (TxBitAdvancePulse),
+    .oRxSamplePulse       (RxSamplePulse),
+    .oRxBitAdvancePulse   (RxBitAdvancePulse),
+    .oAckCapturePulse     (AckCapturePulse),
+    .oSclDriveLow         (SclDriveLow),
+    .oSdaDriveLow         (SdaDriveLow)
+  );
 
-      if (iStop && !oBusy) begin
-        SclReg <= 1'b1;
-      end
+  I2cMasterDatapath uI2cMasterDatapath (
+    .iClk                 (iClk),
+    .iRst                (iRst),
+    .iCoreRstPulse      (iCoreRstPulse),
+    .iSdaInSync           (SdaInSync),
+    .iSlaveAddrLatch      (SlaveAddrLatch),
+    .iRegAddrLatch        (RegAddrLatch),
+    .iLoadAddrWrPulse     (LoadAddrWrPulse),
+    .iLoadRegAddrPulse    (LoadRegAddrPulse),
+    .iLoadAddrRdPulse     (LoadAddrRdPulse),
+    .iLoadWrBytePulse  (LoadWrBytePulse),
+    .iWrByteData       (WrByteData),
+    .iPrepareRdPulse    (PrepareRdPulse),
+    .iNextRdBytePulse   (NextRdBytePulse),
+    .iTxBitAdvancePulse   (TxBitAdvancePulse),
+    .iRxSamplePulse       (RxSamplePulse),
+    .iRxBitAdvancePulse   (RxBitAdvancePulse),
+    .iAckCapturePulse     (AckCapturePulse),
+    .oTxBit               (TxBit),
+    .oBitCnt              (BitCnt),
+    .oAckBit              (AckBit),
+    .oRxByteData          (RxByteData),
+    .oRxByteCompletePulse (RxByteCompletePulse)
+  );
 
-      if (!iAck && oBusy && (CycleCnt == 4'd1)) begin
-        oNackPulse <= 1'b1;
-      end
-    end
-  end
+  I2cMasterDriver uI2cMasterDriver (
+    .iSclDriveLow (SclDriveLow),
+    .iSdaDriveLow (SdaDriveLow),
+    .oScl         (oScl),
+    .oSclOe       (oSclOe),
+    .oSdaOut      (oSdaOut),
+    .oSdaOe       (oSdaOe)
+  );
 
 endmodule

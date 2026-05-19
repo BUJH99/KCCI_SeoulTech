@@ -12,7 +12,7 @@ Summary:
 
 module ExMemReg (
   input  logic                iClk,
-  input  logic                iRstn,
+  input  logic                iRst,
   input  logic                iFlush,
   input  logic                iHold,
   input  rv32i_pkg::EXMEM_t   iData,
@@ -40,8 +40,8 @@ module ExMemReg (
   end
 
   // ==== 2. Synchronous Update Logic ====
-  always_ff @(posedge iClk or negedge iRstn) begin
-    if (!iRstn) begin
+  always_ff @(posedge iClk or posedge iRst) begin
+    if (iRst) begin
       EXMEMReg <= '0;
     end else begin
       EXMEMReg <= EXMEMRegNext;

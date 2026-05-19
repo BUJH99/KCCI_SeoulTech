@@ -16,7 +16,7 @@ module IntcRegIf #(
   parameter int unsigned P_PRIORITY_WIDTH = rv32i_pkg::LP_INTC_PRIORITY_WIDTH
 ) (
   input  logic                         iClk,
-  input  logic                         iRstn,
+  input  logic                         iRst,
   input  logic                         iPsel,
   input  logic                         iPenable,
   input  logic                         iPwrite,
@@ -26,11 +26,11 @@ module IntcRegIf #(
   input  logic [P_NUM_SOURCES-1:0]     iPendingVec,
   input  logic [31:0]                  iClaimId,
 
-  output logic [P_NUM_SOURCES-1:0]     oEnableVec,
-  output logic                         oClaimReadEn,
-  output logic                         oCompleteWriteEn,
+  output logic [P_NUM_SOURCES-1:0]     oEnVec,
+  output logic                         oClaimRdEn,
+  output logic                         oCompleteWrEn,
   output logic [31:0]                  oCompleteId,
-  output logic                         oVectorEnable,
+  output logic                         oVectorEn,
   output logic [((P_NUM_SOURCES + 1) * P_PRIORITY_WIDTH)-1:0] oPriorityEntryFlat,
   output logic [P_PRIORITY_WIDTH-1:0]  oThreshold,
   output logic [((P_NUM_SOURCES + 1) * 32)-1:0] oVectorEntryFlat,
@@ -52,24 +52,24 @@ module IntcRegIf #(
   localparam logic [11:0] LP_REG_VECTOR_ENTRY0 = 12'h080;
   localparam int unsigned LP_NUM_VECTOR_ENTRIES = P_NUM_SOURCES + 1;
 
-  logic [P_NUM_SOURCES-1:0] EnableVec_d;
-  logic                     VectorEnable_d;
+  logic [P_NUM_SOURCES-1:0] EnVec_d;
+  logic                     VectorEn_d;
   logic [((P_NUM_SOURCES + 1) * P_PRIORITY_WIDTH)-1:0] PriorityEntryFlat_d;
   logic [P_PRIORITY_WIDTH-1:0] Threshold_d;
   logic [(LP_NUM_VECTOR_ENTRIES*32)-1:0] VectorEntryFlat_d;
   logic [31:0]              PendingWord;
-  logic [31:0]              EnableWord;
+  logic [31:0]              EnWord;
   logic [31:0]              CtrlWord;
   logic [31:0]              ThresholdWord;
   logic [31:0]              InfoWord;
-  logic [31:0]              EnableWriteWord;
-  logic [31:0]              CompleteWriteWord;
-  logic [31:0]              CtrlWriteWord;
-  logic [31:0]              ThresholdWriteWord;
+  logic [31:0]              EnWrWord;
+  logic [31:0]              CompleteWrWord;
+  logic [31:0]              CtrlWrWord;
+  logic [31:0]              ThresholdWrWord;
   logic [31:0]              PriorityEntryWord;
-  logic [31:0]              PriorityEntryWriteWord;
+  logic [31:0]              PriorityEntryWrWord;
   logic [31:0]              VectorEntryWord;
-  logic [31:0]              VectorEntryWriteWord;
+  logic [31:0]              VectorEntryWrWord;
   logic                     PriorityEntryAccess;
   logic                     VectorEntryAccess;
   logic [11:0]              EntryAddr;
@@ -80,26 +80,26 @@ module IntcRegIf #(
 
   assign oPready                = 1'b1;
   assign AccessEn               = iPsel && iPenable && oPready;
-  assign oClaimReadEn           = AccessEn && !iPwrite && (iPaddr == LP_REG_CLAIM);
-  assign oCompleteWriteEn       = AccessEn && iPwrite && (iPaddr == LP_REG_COMPLETE);
-  assign oCompleteId            = CompleteWriteWord;
-  assign EnableWriteWord        = ByteWriteMerge(EnableWord, iPwdata, iPstrb);
-  assign CompleteWriteWord      = ByteWriteMerge(32'd0, iPwdata, iPstrb);
-  assign CtrlWriteWord          = ByteWriteMerge(CtrlWord, iPwdata, iPstrb);
-  assign ThresholdWriteWord     = ByteWriteMerge(ThresholdWord, iPwdata, iPstrb);
-  assign PriorityEntryWriteWord = ByteWriteMerge(PriorityEntryWord, iPwdata, iPstrb);
-  assign VectorEntryWriteWord   = ByteWriteMerge(VectorEntryWord, iPwdata, iPstrb);
+  assign oClaimRdEn           = AccessEn && !iPwrite && (iPaddr == LP_REG_CLAIM);
+  assign oCompleteWrEn       = AccessEn && iPwrite && (iPaddr == LP_REG_COMPLETE);
+  assign oCompleteId            = CompleteWrWord;
+  assign EnWrWord        = ByteWriteMerge(EnWord, iPwdata, iPstrb);
+  assign CompleteWrWord      = ByteWriteMerge(32'd0, iPwdata, iPstrb);
+  assign CtrlWrWord          = ByteWriteMerge(CtrlWord, iPwdata, iPstrb);
+  assign ThresholdWrWord     = ByteWriteMerge(ThresholdWord, iPwdata, iPstrb);
+  assign PriorityEntryWrWord = ByteWriteMerge(PriorityEntryWord, iPwdata, iPstrb);
+  assign VectorEntryWrWord   = ByteWriteMerge(VectorEntryWord, iPwdata, iPstrb);
 
   always_comb begin
     PendingWord   = '0;
-    EnableWord    = '0;
+    EnWord    = '0;
     CtrlWord      = '0;
     ThresholdWord = '0;
     InfoWord      = '0;
 
     PendingWord[P_NUM_SOURCES-1:0] = iPendingVec;
-    EnableWord[P_NUM_SOURCES-1:0]  = oEnableVec;
-    CtrlWord[0]                    = oVectorEnable;
+    EnWord[P_NUM_SOURCES-1:0]  = oEnVec;
+    CtrlWord[0]                    = oVectorEn;
     ThresholdWord[P_PRIORITY_WIDTH-1:0] = oThreshold;
     InfoWord[7:0]                  = P_NUM_SOURCES[7:0];
     InfoWord[15:8]                 = P_PRIORITY_WIDTH[7:0];
@@ -144,31 +144,31 @@ module IntcRegIf #(
   end
 
   always_comb begin
-    EnableVec_d         = oEnableVec;
-    VectorEnable_d      = oVectorEnable;
+    EnVec_d         = oEnVec;
+    VectorEn_d      = oVectorEn;
     PriorityEntryFlat_d = oPriorityEntryFlat;
     Threshold_d         = oThreshold;
     VectorEntryFlat_d   = oVectorEntryFlat;
 
     if (AccessEn && iPwrite && (iPaddr == LP_REG_ENABLE)) begin
-      EnableVec_d = EnableWriteWord[P_NUM_SOURCES-1:0];
+      EnVec_d = EnWrWord[P_NUM_SOURCES-1:0];
     end
 
     if (AccessEn && iPwrite && (iPaddr == LP_REG_CTRL)) begin
-      VectorEnable_d = CtrlWriteWord[0];
+      VectorEn_d = CtrlWrWord[0];
     end
 
     if (AccessEn && iPwrite && (iPaddr == LP_REG_THRESHOLD)) begin
-      Threshold_d = ThresholdWriteWord[P_PRIORITY_WIDTH-1:0];
+      Threshold_d = ThresholdWrWord[P_PRIORITY_WIDTH-1:0];
     end
 
     if (AccessEn && iPwrite && PriorityEntryAccess && (PriorityEntryIdx != 0)) begin
       PriorityEntryFlat_d[(PriorityEntryIdx * P_PRIORITY_WIDTH) +: P_PRIORITY_WIDTH] =
-          PriorityEntryWriteWord[P_PRIORITY_WIDTH-1:0];
+          PriorityEntryWrWord[P_PRIORITY_WIDTH-1:0];
     end
 
     if (AccessEn && iPwrite && VectorEntryAccess && (VectorEntryIdx != 0)) begin
-      VectorEntryFlat_d[(VectorEntryIdx * 32) +: 32] = {VectorEntryWriteWord[31:2], 2'b00};
+      VectorEntryFlat_d[(VectorEntryIdx * 32) +: 32] = {VectorEntryWrWord[31:2], 2'b00};
     end
   end
 
@@ -188,7 +188,7 @@ module IntcRegIf #(
 
         LP_REG_ENABLE: begin
           if (!iPwrite) begin
-            oPrdata = EnableWord;
+            oPrdata = EnWord;
           end
         end
 
@@ -243,16 +243,16 @@ module IntcRegIf #(
     end
   end
 
-  always_ff @(posedge iClk or negedge iRstn) begin
-    if (!iRstn) begin
-      oEnableVec         <= '0;
-      oVectorEnable      <= 1'b0;
+  always_ff @(posedge iClk or posedge iRst) begin
+    if (iRst) begin
+      oEnVec         <= '0;
+      oVectorEn      <= 1'b0;
       oPriorityEntryFlat <= '0;
       oThreshold         <= '0;
       oVectorEntryFlat   <= '0;
     end else begin
-      oEnableVec         <= EnableVec_d;
-      oVectorEnable      <= VectorEnable_d;
+      oEnVec         <= EnVec_d;
+      oVectorEn      <= VectorEn_d;
       oPriorityEntryFlat <= PriorityEntryFlat_d;
       oThreshold         <= Threshold_d;
       oVectorEntryFlat   <= VectorEntryFlat_d;

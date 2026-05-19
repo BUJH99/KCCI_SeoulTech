@@ -12,7 +12,7 @@ Summary:
 
 module UartRegs (
   input  logic        iClk,
-  input  logic        iRstn,
+  input  logic        iRst,
   input  logic        iAccessEn,
   input  logic        iPwrite,
   input  logic [11:0] iPaddr,
@@ -30,8 +30,8 @@ module UartRegs (
   output logic        oTxEn,
   output logic        oRxIrqEn,
   output logic        oRxOverflow,
-  output logic        oTxDataWriteReq,
-  output logic        oRxDataReadReq
+  output logic        oTxDataWrReq,
+  output logic        oRxDataRdReq
 );
 
   import rv32i_pkg::*;
@@ -42,24 +42,24 @@ module UartRegs (
   localparam logic [11:0] LP_REG_RXDATA = 12'h00C;
   localparam logic [11:0] LP_REG_IRQ_EN = 12'h010;
 
-  logic        CtrlWriteEn;
-  logic        IrqEnWriteEn;
+  logic        CtrlWrEn;
+  logic        IrqEnWrEn;
   logic [31:0] CtrlWord;
-  logic [31:0] CtrlWordWriteData;
+  logic [31:0] CtrlWordWrData;
   logic [31:0] StatusWord;
   logic [31:0] IrqEnWord;
-  logic [31:0] IrqEnWordWriteData;
+  logic [31:0] IrqEnWordWrData;
 
   assign CtrlWord           = {30'd0, oTxEn, oRxEn};
-  assign CtrlWordWriteData  = ByteWriteMerge(CtrlWord, iPwdata, iPstrb);
+  assign CtrlWordWrData  = ByteWriteMerge(CtrlWord, iPwdata, iPstrb);
   assign StatusWord         = {28'd0, oRxOverflow, iTxBusy, !iTxFifoFull, !iRxFifoEmpty};
   assign IrqEnWord          = {31'd0, oRxIrqEn};
-  assign IrqEnWordWriteData = ByteWriteMerge(IrqEnWord, iPwdata, iPstrb);
+  assign IrqEnWordWrData = ByteWriteMerge(IrqEnWord, iPwdata, iPstrb);
 
-  assign CtrlWriteEn   = iAccessEn && iPwrite && (iPaddr == LP_REG_CTRL);
-  assign IrqEnWriteEn  = iAccessEn && iPwrite && (iPaddr == LP_REG_IRQ_EN);
-  assign oTxDataWriteReq = iAccessEn && iPwrite && (iPaddr == LP_REG_TXDATA);
-  assign oRxDataReadReq  = iAccessEn && !iPwrite && (iPaddr == LP_REG_RXDATA);
+  assign CtrlWrEn   = iAccessEn && iPwrite && (iPaddr == LP_REG_CTRL);
+  assign IrqEnWrEn  = iAccessEn && iPwrite && (iPaddr == LP_REG_IRQ_EN);
+  assign oTxDataWrReq = iAccessEn && iPwrite && (iPaddr == LP_REG_TXDATA);
+  assign oRxDataRdReq  = iAccessEn && !iPwrite && (iPaddr == LP_REG_RXDATA);
 
   always_comb begin
     oPrdata  = '0;
@@ -111,20 +111,20 @@ module UartRegs (
     end
   end
 
-  always_ff @(posedge iClk or negedge iRstn) begin
-    if (!iRstn) begin
+  always_ff @(posedge iClk or posedge iRst) begin
+    if (iRst) begin
       oRxEn       <= 1'b1;
       oTxEn       <= 1'b1;
       oRxIrqEn    <= 1'b0;
       oRxOverflow <= 1'b0;
     end else begin
-      if (CtrlWriteEn) begin
-        oRxEn <= CtrlWordWriteData[0];
-        oTxEn <= CtrlWordWriteData[1];
+      if (CtrlWrEn) begin
+        oRxEn <= CtrlWordWrData[0];
+        oTxEn <= CtrlWordWrData[1];
       end
 
-      if (IrqEnWriteEn) begin
-        oRxIrqEn <= IrqEnWordWriteData[0];
+      if (IrqEnWrEn) begin
+        oRxIrqEn <= IrqEnWordWrData[0];
       end
 
       if (iRxOverflowSet) begin

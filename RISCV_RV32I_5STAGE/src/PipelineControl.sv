@@ -29,6 +29,8 @@ module PipelineControl (
   input  logic                     iMstatusMie,
   input  logic                     iMieMeie,
   input  logic                     iMipMeip,
+  input  logic                     iMieMtie,
+  input  logic                     iMipMtip,
   input  logic [31:0]              iMtvec,
   input  logic                     iIntcVectorValid,
   input  logic [31:0]              iIntcVectorPc,
@@ -45,7 +47,7 @@ module PipelineControl (
   output logic                     oTrapEnterValid,
   output logic [31:0]              oTrapEnterEpc,
   output logic [31:0]              oTrapEnterCause,
-  output logic                     oInterruptAccepted
+  output logic                     oIrqAccepted
 );
 
   import rv32i_pkg::*;
@@ -53,7 +55,7 @@ module PipelineControl (
   logic        TrapCaptureValid;
   logic        TrapFromEx;
   logic        TrapFromMem;
-  logic        TrapFromInterrupt;
+  logic        TrapFromIrq;
 
   TrapController uTrapController (
     .iIFID              (iIFID),
@@ -69,6 +71,8 @@ module PipelineControl (
     .iMstatusMie        (iMstatusMie),
     .iMieMeie           (iMieMeie),
     .iMipMeip           (iMipMeip),
+    .iMieMtie           (iMieMtie),
+    .iMipMtip           (iMipMtip),
     .iMtvec             (iMtvec),
     .iIntcVectorValid   (iIntcVectorValid),
     .iIntcVectorPc      (iIntcVectorPc),
@@ -78,10 +82,10 @@ module PipelineControl (
     .oTrapEnterCause    (oTrapEnterCause),
     .oTrapFromEx        (TrapFromEx),
     .oTrapFromMem       (TrapFromMem),
-    .oTrapFromInterrupt (TrapFromInterrupt),
+    .oTrapFromIrq (TrapFromIrq),
     .oTrapRedirectValid (oTrapRedirectValid),
     .oTrapRedirectPc    (oTrapRedirectPc),
-    .oInterruptAccepted (oInterruptAccepted)
+    .oIrqAccepted (oIrqAccepted)
   );
 
   PipeFlowCtrl uPipeFlowCtrl (
@@ -89,7 +93,7 @@ module PipelineControl (
     .iTrapCaptureValid (TrapCaptureValid),
     .iTrapFromEx       (TrapFromEx),
     .iTrapFromMem      (TrapFromMem),
-    .iTrapFromInterrupt(TrapFromInterrupt),
+    .iTrapFromIrq(TrapFromIrq),
     .iIdRedirectValid  (iIdRedirectValid),
     .iExRedirectValid  (iExRedirectValid),
     .iIFIDValid        (iIFID.Valid),

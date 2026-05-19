@@ -16,7 +16,7 @@ module InterruptController #(
   parameter int unsigned P_PRIORITY_WIDTH = rv32i_pkg::LP_INTC_PRIORITY_WIDTH
 ) (
   input  logic                         iClk,
-  input  logic                         iRstn,
+  input  logic                         iRst,
   input  logic                         iPsel,
   input  logic                         iPenable,
   input  logic                         iPwrite,
@@ -30,7 +30,7 @@ module InterruptController #(
   output logic                         oPslverr,
   output logic                         oVectorValid,
   output logic [31:0]                  oVectorPc,
-  output logic [31:0]                  oSelectedSourceId,
+  output logic [31:0]                  oSelSrcId,
   output logic                         oMachineExtIrq
 );
 
@@ -41,26 +41,26 @@ module InterruptController #(
   logic [P_NUM_SOURCES-1:0] CompleteAcceptVec;
   logic [P_NUM_SOURCES-1:0] PendingVec;
   logic [P_NUM_SOURCES-1:0] InServiceVec;
-  logic [P_NUM_SOURCES-1:0] EnableVec;
+  logic [P_NUM_SOURCES-1:0] EnVec;
   logic [P_NUM_SOURCES-1:0] ClaimPendingVec;
   logic [P_NUM_SOURCES-1:0] ClaimSelVec;
   logic [P_NUM_SOURCES-1:0] CompleteSelVec;
-  logic                     ClaimReadEn;
-  logic                     CompleteWriteEn;
+  logic                     ClaimRdEn;
+  logic                     CompleteWrEn;
   logic [31:0]              CompleteId;
   logic [31:0]              ClaimId;
-  logic                     VectorEnable;
+  logic                     VectorEn;
   logic [((P_NUM_SOURCES + 1) * P_PRIORITY_WIDTH)-1:0] PriorityEntryFlat;
   logic [P_PRIORITY_WIDTH-1:0] Threshold;
   logic [(LP_NUM_VECTOR_ENTRIES*32)-1:0] VectorEntryFlat;
-  logic                     SelectedSourceValid;
+  logic                     SelSrcValid;
 
   genvar SourceIdx;
   generate
     for (SourceIdx = 0; SourceIdx < P_NUM_SOURCES; SourceIdx = SourceIdx + 1) begin : genIntcGateway
       IntcGateway uIntcGateway (
         .iClk             (iClk),
-        .iRstn            (iRstn),
+        .iRst            (iRst),
         .iRawIrq          (iIrqVec[SourceIdx]),
         .iCompleteAccept  (CompleteAcceptVec[SourceIdx]),
         .oPendingSetPulse (PendingSetVec[SourceIdx]),
@@ -74,7 +74,7 @@ module InterruptController #(
     .P_PRIORITY_WIDTH (P_PRIORITY_WIDTH)
   ) uIntcRegIf (
     .iClk               (iClk),
-    .iRstn              (iRstn),
+    .iRst              (iRst),
     .iPsel              (iPsel),
     .iPenable           (iPenable),
     .iPwrite            (iPwrite),
@@ -83,11 +83,11 @@ module InterruptController #(
     .iPwdata            (iPwdata),
     .iPendingVec        (PendingVec),
     .iClaimId           (ClaimId),
-    .oEnableVec         (EnableVec),
-    .oClaimReadEn       (ClaimReadEn),
-    .oCompleteWriteEn   (CompleteWriteEn),
+    .oEnVec         (EnVec),
+    .oClaimRdEn       (ClaimRdEn),
+    .oCompleteWrEn   (CompleteWrEn),
     .oCompleteId        (CompleteId),
-    .oVectorEnable      (VectorEnable),
+    .oVectorEn      (VectorEn),
     .oPriorityEntryFlat (PriorityEntryFlat),
     .oThreshold         (Threshold),
     .oVectorEntryFlat   (VectorEntryFlat),
@@ -100,11 +100,11 @@ module InterruptController #(
     .P_NUM_SOURCES(P_NUM_SOURCES)
   ) uIntcPendingCtrl (
     .iClk               (iClk),
-    .iRstn              (iRstn),
+    .iRst              (iRst),
     .iPendingSetVec     (PendingSetVec),
-    .iClaimReadEn       (ClaimReadEn),
+    .iClaimRdEn       (ClaimRdEn),
     .iClaimSelVec       (ClaimSelVec),
-    .iCompleteWriteEn   (CompleteWriteEn),
+    .iCompleteWrEn   (CompleteWrEn),
     .iCompleteSelVec    (CompleteSelVec),
     .oPendingVec        (PendingVec),
     .oInServiceVec      (InServiceVec),
@@ -116,7 +116,7 @@ module InterruptController #(
     .P_PRIORITY_WIDTH (P_PRIORITY_WIDTH)
   ) uIntcPriorityClaim (
     .iPendingVec          (PendingVec),
-    .iEnableVec           (EnableVec),
+    .iEnVec           (EnVec),
     .iPriorityEntryFlat   (PriorityEntryFlat),
     .iThreshold           (Threshold),
     .iCompleteId          (CompleteId),
@@ -124,18 +124,18 @@ module InterruptController #(
     .oClaimSelVec         (ClaimSelVec),
     .oCompleteSelVec      (CompleteSelVec),
     .oClaimId             (ClaimId),
-    .oSelectedSourceId    (oSelectedSourceId),
-    .oSelectedSourceValid (SelectedSourceValid),
+    .oSelSrcId    (oSelSrcId),
+    .oSelSrcValid (SelSrcValid),
     .oMachineExtIrq       (oMachineExtIrq)
   );
 
   IntcVectorTable #(
     .P_NUM_SOURCES(P_NUM_SOURCES)
   ) uIntcVectorTable (
-    .iVectorEnable        (VectorEnable),
+    .iVectorEn        (VectorEn),
     .iVectorEntryFlat     (VectorEntryFlat),
-    .iSelectedSourceValid (SelectedSourceValid),
-    .iSelectedSourceId    (oSelectedSourceId),
+    .iSelSrcValid (SelSrcValid),
+    .iSelSrcId    (oSelSrcId),
     .oVectorValid         (oVectorValid),
     .oVectorPc            (oVectorPc)
   );

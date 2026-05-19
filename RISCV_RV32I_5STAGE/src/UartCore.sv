@@ -4,7 +4,7 @@ Name: UartCore
 Role: UART serial datapath wrapper for baud generation, FIFOs, and RX/TX engines
 Summary:
   - Owns the baud-rate generator plus RX/TX FIFO flow control around the UART leaf FSMs
-  - Exposes FIFO/status signals back to the APB register block and raises RX overflow events
+  - Exposes route-neutral FIFO interfaces for CPU UART and InstDma users
 [MODULE_INFO_END]
 */
 
@@ -16,11 +16,12 @@ module UartCore #(
   parameter int unsigned P_FIFO_DEPTH = 16
 ) (
   input  logic       iClk,
-  input  logic       iRstn,
+  input  logic       iRst,
   input  logic       iRxEn,
   input  logic       iTxEn,
-  input  logic       iTxDataWriteReq,
-  input  logic       iRxDataReadReq,
+  input  logic       iRxFifoClear,
+  input  logic       iRxFifoPop,
+  input  logic       iTxFifoPush,
   input  logic [7:0] iTxData,
   input  logic       iUartRx,
 
@@ -30,11 +31,11 @@ module UartCore #(
   output logic       oTxFifoEmpty,
   output logic       oTxFifoFull,
   output logic       oTxBusy,
+  output logic       oTxIdle,
   output logic       oRxOverflowSet,
   output logic       oUartTx
 );
 
-  logic       Rst;
   logic       SampleTick;
   logic       RxValid;
   logic [7:0] RxByte;
@@ -46,13 +47,13 @@ module UartCore #(
   logic       RxFifoPush;
   logic       RxFifoPop;
 
-  assign Rst            = !iRstn;
-  assign TxFifoPush     = iTxDataWriteReq && !oTxFifoFull;
+  assign TxFifoPush     = iTxFifoPush && !oTxFifoFull;
   assign TxFifoPop      = iTxEn && !oTxBusy && !oTxFifoEmpty;
   assign TxStart        = TxFifoPop;
   assign RxFifoPush     = iRxEn && RxValid && !oRxFifoFull;
-  assign RxFifoPop      = iRxDataReadReq && !oRxFifoEmpty;
+  assign RxFifoPop      = iRxFifoPop && !oRxFifoEmpty;
   assign oRxOverflowSet = iRxEn && RxValid && oRxFifoFull;
+  assign oTxIdle        = oTxFifoEmpty && !oTxBusy;
 
   baud_rate_generator #(
     .P_CLK_HZ     (P_CLK_HZ),
@@ -60,13 +61,13 @@ module UartCore #(
     .P_OVERSAMPLE (16)
   ) uBaudRateGenerator (
     .iClk        (iClk),
-    .iRst        (Rst),
+    .iRst        (iRst),
     .oSampleTick (SampleTick)
   );
 
   uart_rx uUartRx (
     .iClk        (iClk),
-    .iRst        (Rst),
+    .iRst        (iRst),
     .iSampleTick (SampleTick),
     .iUartRx     (iUartRx),
     .oRxValid    (RxValid),
@@ -77,7 +78,8 @@ module UartCore #(
     .P_DEPTH (P_FIFO_DEPTH)
   ) uRxFifo (
     .iClk    (iClk),
-    .iRst    (Rst),
+    .iRst    (iRst),
+    .iClear  (iRxFifoClear),
     .iWrEn   (RxFifoPush),
     .iWrData (RxByte),
     .iRdEn   (RxFifoPop),
@@ -90,7 +92,7 @@ module UartCore #(
     .P_DEPTH (P_FIFO_DEPTH)
   ) uTxFifo (
     .iClk    (iClk),
-    .iRst    (Rst),
+    .iRst    (iRst),
     .iWrEn   (TxFifoPush),
     .iWrData (iTxData),
     .iRdEn   (TxFifoPop),
@@ -101,7 +103,7 @@ module UartCore #(
 
   uart_tx uUartTx (
     .iClk        (iClk),
-    .iRst        (Rst),
+    .iRst        (iRst),
     .iSampleTick (SampleTick),
     .iTxStart    (TxStart),
     .iTxData     (TxFifoData),

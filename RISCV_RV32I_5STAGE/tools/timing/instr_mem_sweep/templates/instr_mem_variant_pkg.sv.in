@@ -1,0 +1,10 @@
+package instr_mem_variant_pkg;
+  localparam string       LP_CASE_ID = "@CASE_ID@";
+  localparam string       LP_EXEC_REGION = "@EXEC_REGION@";
+  localparam string       LP_IFETCH_BUILD_MODE = "@IFETCH_BUILD_MODE@";
+  localparam int unsigned LP_SIZE_BYTES = @SIZE_BYTES@;
+  localparam int unsigned LP_BOOT_DEPTH_WORDS = @BOOT_DEPTH_WORDS@;
+  localparam int unsigned LP_PROGRAM_DEPTH_WORDS = @PROGRAM_DEPTH_WORDS@;
+  localparam int unsigned LP_PROGRAM_READ_ONLY_INIT = @PROGRAM_READ_ONLY_INIT@;
+  localparam int unsigned LP_PREFETCH_DEPTH = @PREFETCH_DEPTH@;
+endpackage

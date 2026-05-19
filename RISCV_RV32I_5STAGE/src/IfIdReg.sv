@@ -12,7 +12,7 @@ Summary:
 
 module IfIdReg (
   input  logic               iClk,
-  input  logic               iRstn,
+  input  logic               iRst,
   input  logic               iFlush,
   input  logic               iHold,
   input  rv32i_pkg::IFID_t   iData,
@@ -31,8 +31,8 @@ module IfIdReg (
   // Updates the pipeline register with stall and flush capabilities.
   // Hold takes priority over data capture, and Flush invalidates the instruction without
   // zeroing out the datapath signals (saving toggle power).
-  always_ff @(posedge iClk or negedge iRstn) begin
-    if (!iRstn) begin
+  always_ff @(posedge iClk or posedge iRst) begin
+    if (iRst) begin
       IFIDReg <= '0;
     end else begin
     

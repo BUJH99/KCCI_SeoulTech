@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="345" height="489" viewBox="0 0 345 489" role="img" aria-labelledby="title desc">
+  <title id="title">DEMO FSM Diagram without Pause State</title>
+  <desc id="desc">Monochrome academic-style finite state machine diagram for demo idle, loaded, sorting, action, sorted decision, and done states.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,4 L0,8 Z" fill="#111111"/>
+    </marker>
+    <style>
+      .bg { fill: #ffffff; }
+      .state, .action, .decision {
+        fill: #ffffff;
+        stroke: #111111;
+        stroke-width: 1.35;
+      }
+      .state, .action { rx: 5; ry: 5; }
+      .flow {
+        fill: none;
+        stroke: #111111;
+        stroke-width: 1.15;
+        stroke-linecap: square;
+        stroke-linejoin: miter;
+        marker-end: url(#arrow);
+      }
+      .flow-lite {
+        fill: none;
+        stroke: #333333;
+        stroke-width: 1.0;
+        stroke-linecap: square;
+        stroke-linejoin: miter;
+        marker-end: url(#arrow);
+      }
+      .label {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 9px;
+        font-weight: 600;
+        fill: #111111;
+      }
+      .node-text {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 10px;
+        font-weight: 700;
+        fill: #111111;
+        text-anchor: middle;
+        dominant-baseline: central;
+      }
+      .small-text {
+        font-family: Arial, Helvetica, sans-serif;
+        font-size: 9px;
+        font-weight: 600;
+        fill: #111111;
+        text-anchor: middle;
+        dominant-baseline: central;
+      }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="345" height="489"/>
+
+  <!-- Reset / restart path from DEMO_DONE to DEMO_IDLE -->
+  <path class="flow-lite" d="M154 464 L49 464 L49 30 L150 30"/>
+  <text class="label" x="78" y="456">BTN_RESET</text>
+
+  <!-- Main states -->
+  <rect class="state" x="154" y="15" width="89" height="30" rx="5"/>
+  <text class="node-text" x="198.5" y="30">DEMO_IDLE</text>
+
+  <polygon class="decision" points="198,64 235,84 198,104 161,84"/>
+  <text class="small-text" x="198" y="84">BTN_SORT?</text>
+
+  <rect class="state" x="154" y="135" width="89" height="30" rx="5"/>
+  <text class="node-text" x="198.5" y="150">DEMO_LOADED</text>
+
+  <rect class="state" x="154" y="195" width="89" height="30" rx="5"/>
+  <text class="node-text" x="198.5" y="210">DEMO_SORTING</text>
+
+  <polygon class="decision" points="198,258 245,278 198,298 151,278"/>
+  <text class="small-text" x="198" y="278">Tick Elapsed?</text>
+
+  <rect class="action" x="124" y="330" width="149" height="30" rx="14"/>
+  <text class="node-text" x="198.5" y="345">sort_step() &amp; trace</text>
+
+  <polygon class="decision" points="198,385 235,405 198,425 161,405"/>
+  <text class="small-text" x="198" y="405">Sorted?</text>
+
+  <rect class="state" x="154" y="449" width="89" height="30" rx="5"/>
+  <text class="node-text" x="198.5" y="464">DEMO_DONE</text>
+
+  <!-- Main vertical flow -->
+  <path class="flow" d="M198.5 45 L198.5 62"/>
+  <path class="flow" d="M198.5 104 L198.5 132"/>
+  <text class="label" x="205" y="123">Yes</text>
+
+  <path class="flow" d="M198.5 165 L198.5 192"/>
+  <path class="flow" d="M198.5 225 L198.5 255"/>
+  <path class="flow" d="M198.5 298 L198.5 327"/>
+  <text class="label" x="205" y="318">Yes</text>
+
+  <path class="flow" d="M198.5 360 L198.5 382"/>
+  <path class="flow" d="M198.5 425 L198.5 446"/>
+  <text class="label" x="205" y="440">Yes</text>
+
+  <!-- No loop from tick elapsed back to sorting -->
+  <path class="flow-lite" d="M245 278 L303 278 L303 210 L246 210"/>
+  <text class="label" x="254" y="269">No</text>
+
+  <!-- No loop from sorted back to sorting -->
+  <path class="flow-lite" d="M235 405 L333 405 L333 210 L246 210"/>
+  <text class="label" x="246" y="395">No</text>
+</svg>

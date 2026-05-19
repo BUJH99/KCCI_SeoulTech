@@ -12,7 +12,7 @@ Summary:
 
 module FndRegs (
   input  logic        iClk,
-  input  logic        iRstn,
+  input  logic        iRst,
   input  logic        iAccessEn,
   input  logic        iPwrite,
   input  logic [11:0] iPaddr,
@@ -38,19 +38,19 @@ module FndRegs (
   logic [31:0] BlinkWord;
   logic [31:0] DpWord;
   logic [31:0] CtrlWord;
-  logic [31:0] DigitsWriteWord;
-  logic [31:0] BlinkWriteWord;
-  logic [31:0] DpWriteWord;
-  logic [31:0] CtrlWriteWord;
+  logic [31:0] DigitsWrWord;
+  logic [31:0] BlinkWrWord;
+  logic [31:0] DpWrWord;
+  logic [31:0] CtrlWrWord;
 
   assign DigitsWord      = {16'd0, oDigitsBcd};
   assign BlinkWord       = {28'd0, oBlinkMask};
   assign DpWord          = {28'd0, oDpMask};
   assign CtrlWord        = {31'd0, oDisplayEn};
-  assign DigitsWriteWord = ByteWriteMerge(DigitsWord, iPwdata, iPstrb);
-  assign BlinkWriteWord  = ByteWriteMerge(BlinkWord, iPwdata, iPstrb);
-  assign DpWriteWord     = ByteWriteMerge(DpWord, iPwdata, iPstrb);
-  assign CtrlWriteWord   = ByteWriteMerge(CtrlWord, iPwdata, iPstrb);
+  assign DigitsWrWord = ByteWriteMerge(DigitsWord, iPwdata, iPstrb);
+  assign BlinkWrWord  = ByteWriteMerge(BlinkWord, iPwdata, iPstrb);
+  assign DpWrWord     = ByteWriteMerge(DpWord, iPwdata, iPstrb);
+  assign CtrlWrWord   = ByteWriteMerge(CtrlWord, iPwdata, iPstrb);
 
   always_comb begin
     oPrdata  = '0;
@@ -89,27 +89,27 @@ module FndRegs (
     end
   end
 
-  always_ff @(posedge iClk or negedge iRstn) begin
-    if (!iRstn) begin
+  always_ff @(posedge iClk or posedge iRst) begin
+    if (iRst) begin
       oDigitsBcd <= '0;
       oBlinkMask <= '0;
       oDpMask    <= '0;
       oDisplayEn <= 1'b1;
     end else begin
       if (iAccessEn && iPwrite && (iPaddr == LP_REG_DIGITS_BCD)) begin
-        oDigitsBcd <= DigitsWriteWord[15:0];
+        oDigitsBcd <= DigitsWrWord[15:0];
       end
 
       if (iAccessEn && iPwrite && (iPaddr == LP_REG_BLINK_MASK)) begin
-        oBlinkMask <= BlinkWriteWord[3:0];
+        oBlinkMask <= BlinkWrWord[3:0];
       end
 
       if (iAccessEn && iPwrite && (iPaddr == LP_REG_DP_MASK)) begin
-        oDpMask <= DpWriteWord[3:0];
+        oDpMask <= DpWrWord[3:0];
       end
 
       if (iAccessEn && iPwrite && (iPaddr == LP_REG_CTRL)) begin
-        oDisplayEn <= CtrlWriteWord[0];
+        oDisplayEn <= CtrlWrWord[0];
       end
     end
   end

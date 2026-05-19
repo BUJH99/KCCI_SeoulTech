@@ -12,8 +12,8 @@
 
 <!-- DETAIL_SECTION:single_cycle:full_coverage:START -->
 - Source project: `RISCV_RV32I_SINGLE`
-- Source artifacts: `/mnt/c/Users/tbdk5/Desktop/MAIN/0_Working/git/FPGA_Auto_Project/Project/RISCV_32I_SINGLE/.analysis/single_cycle_perf/programs/full_coverage`
-- Standalone report path: `/mnt/c/Users/tbdk5/Desktop/MAIN/0_Working/git/Project/RISCV_RV32I_SINGLE/md/SINGLE_CYCLE_OPTIMIZATION_REPORT.md`
+- Source artifacts: `../../FPGA_Auto_Project/Project/RISCV_32I_SINGLE/.analysis/single_cycle_perf/programs/full_coverage`
+- Standalone report path: `../RISCV_RV32I_SINGLE/md/SINGLE_CYCLE_OPTIMIZATION_REPORT.md`
 - Detail updated: `2026-04-29 21:15:01 KST`
 
 #### 🧭 Summary
@@ -71,19 +71,19 @@
 
 | Evidence | Location |
 | --- | --- |
-| Artifact directory | `/mnt/c/Users/tbdk5/Desktop/MAIN/0_Working/git/FPGA_Auto_Project/Project/RISCV_32I_SINGLE/.analysis/single_cycle_perf/programs/full_coverage` |
-| Timing summary | `/mnt/c/Users/tbdk5/Desktop/MAIN/0_Working/git/FPGA_Auto_Project/Project/RISCV_32I_SINGLE/.analysis/single_cycle_perf/programs/full_coverage/actual_timing_summary.rpt` |
-| Parsed timing paths | `/mnt/c/Users/tbdk5/Desktop/MAIN/0_Working/git/FPGA_Auto_Project/Project/RISCV_32I_SINGLE/.analysis/single_cycle_perf/programs/full_coverage/actual_timing_paths.tsv` |
-| Top timing report | `/mnt/c/Users/tbdk5/Desktop/MAIN/0_Working/git/FPGA_Auto_Project/Project/RISCV_32I_SINGLE/.analysis/single_cycle_perf/programs/full_coverage/actual_timing_top100.rpt` |
-| Utilization summary | `/mnt/c/Users/tbdk5/Desktop/MAIN/0_Working/git/FPGA_Auto_Project/Project/RISCV_32I_SINGLE/.analysis/single_cycle_perf/programs/full_coverage/actual_utilization.rpt` |
-| Standalone report | `/mnt/c/Users/tbdk5/Desktop/MAIN/0_Working/git/Project/RISCV_RV32I_SINGLE/md/SINGLE_CYCLE_OPTIMIZATION_REPORT.md` |
-| Companion pipeline artifacts | `/mnt/c/Users/tbdk5/Desktop/MAIN/0_Working/git/Project/RISCV_RV32I_5STAGE/.analysis/pipeline_perf/programs/full_coverage/pipeline` |
+| Artifact directory | `../../FPGA_Auto_Project/Project/RISCV_32I_SINGLE/.analysis/single_cycle_perf/programs/full_coverage` |
+| Timing summary | `../../FPGA_Auto_Project/Project/RISCV_32I_SINGLE/.analysis/single_cycle_perf/programs/full_coverage/actual_timing_summary.rpt` |
+| Parsed timing paths | `../../FPGA_Auto_Project/Project/RISCV_32I_SINGLE/.analysis/single_cycle_perf/programs/full_coverage/actual_timing_paths.tsv` |
+| Top timing report | `../../FPGA_Auto_Project/Project/RISCV_32I_SINGLE/.analysis/single_cycle_perf/programs/full_coverage/actual_timing_top100.rpt` |
+| Utilization summary | `../../FPGA_Auto_Project/Project/RISCV_32I_SINGLE/.analysis/single_cycle_perf/programs/full_coverage/actual_utilization.rpt` |
+| Standalone report | `../RISCV_RV32I_SINGLE/md/SINGLE_CYCLE_OPTIMIZATION_REPORT.md` |
+| Companion pipeline artifacts | `.analysis/pipeline_perf/programs/full_coverage/pipeline` |
 <!-- DETAIL_SECTION:single_cycle:full_coverage:END -->
 
 ### Pipeline Performance Detail
 
 <!-- DETAIL_SECTION:pipeline_perf:full_coverage:START -->
-- Source report: `C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\RISCV_RV32I_5STAGE\md\PIPELINE_PERF_REPORT.md`
+- Source report: `md/PIPELINE_PERF_REPORT.md`
 - Detail updated: `2026-05-05 02:17:20 대한민국 표준시`
 
 - Program key: `full_coverage`
@@ -145,12 +145,12 @@
 
 | Evidence | Location |
 | --- | --- |
-| Artifact root | `C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\RISCV_RV32I_5STAGE\.analysis\pipeline_perf\programs\full_coverage` |
-| Single-cycle artifacts | `C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\RISCV_RV32I_5STAGE\.analysis\pipeline_perf\programs\full_coverage\single_cycle` |
-| 5-stage artifacts | `C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\RISCV_RV32I_5STAGE\.analysis\pipeline_perf\programs\full_coverage\pipeline` |
-| Instruction-focus artifacts | `C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\RISCV_RV32I_5STAGE\.analysis\pipeline_perf\programs\full_coverage\instruction_focus` |
-| Program memory | `C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\RISCV_RV32I_5STAGE\src\timing_programs\Full Coverage.mem` |
-| Instruction source | `C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\RISCV_RV32I_5STAGE\src\timing_programs\Full Coverage.s` |
+| Artifact root | `.analysis/pipeline_perf/programs/full_coverage` |
+| Single-cycle artifacts | `.analysis/pipeline_perf/programs/full_coverage/single_cycle` |
+| 5-stage artifacts | `.analysis/pipeline_perf/programs/full_coverage/pipeline` |
+| Instruction-focus artifacts | `.analysis/pipeline_perf/programs/full_coverage/instruction_focus` |
+| Program memory | `src/timing_programs/Full Coverage.mem` |
+| Instruction source | `src/timing_programs/Full Coverage.s` |
 <!-- DETAIL_SECTION:pipeline_perf:full_coverage:END -->
 <!-- PROGRAM_SECTION:full_coverage:END -->
 
@@ -163,8 +163,8 @@
 
 <!-- DETAIL_SECTION:single_cycle:bubble_sort:START -->
 - Source project: `RISCV_RV32I_SINGLE`
-- Source artifacts: `/mnt/c/Users/tbdk5/Desktop/MAIN/0_Working/git/FPGA_Auto_Project/Project/RISCV_32I_SINGLE/.analysis/single_cycle_perf/programs/bubble_sort`
-- Standalone report path: `/mnt/c/Users/tbdk5/Desktop/MAIN/0_Working/git/Project/RISCV_RV32I_SINGLE/md/SINGLE_CYCLE_OPTIMIZATION_REPORT.md`
+- Source artifacts: `../../FPGA_Auto_Project/Project/RISCV_32I_SINGLE/.analysis/single_cycle_perf/programs/bubble_sort`
+- Standalone report path: `../RISCV_RV32I_SINGLE/md/SINGLE_CYCLE_OPTIMIZATION_REPORT.md`
 - Detail updated: `2026-04-29 21:15:13 KST`
 
 #### 🧭 Summary
@@ -222,19 +222,19 @@
 
 | Evidence | Location |
 | --- | --- |
-| Artifact directory | `/mnt/c/Users/tbdk5/Desktop/MAIN/0_Working/git/FPGA_Auto_Project/Project/RISCV_32I_SINGLE/.analysis/single_cycle_perf/programs/bubble_sort` |
-| Timing summary | `/mnt/c/Users/tbdk5/Desktop/MAIN/0_Working/git/FPGA_Auto_Project/Project/RISCV_32I_SINGLE/.analysis/single_cycle_perf/programs/bubble_sort/actual_timing_summary.rpt` |
-| Parsed timing paths | `/mnt/c/Users/tbdk5/Desktop/MAIN/0_Working/git/FPGA_Auto_Project/Project/RISCV_32I_SINGLE/.analysis/single_cycle_perf/programs/bubble_sort/actual_timing_paths.tsv` |
-| Top timing report | `/mnt/c/Users/tbdk5/Desktop/MAIN/0_Working/git/FPGA_Auto_Project/Project/RISCV_32I_SINGLE/.analysis/single_cycle_perf/programs/bubble_sort/actual_timing_top100.rpt` |
-| Utilization summary | `/mnt/c/Users/tbdk5/Desktop/MAIN/0_Working/git/FPGA_Auto_Project/Project/RISCV_32I_SINGLE/.analysis/single_cycle_perf/programs/bubble_sort/actual_utilization.rpt` |
-| Standalone report | `/mnt/c/Users/tbdk5/Desktop/MAIN/0_Working/git/Project/RISCV_RV32I_SINGLE/md/SINGLE_CYCLE_OPTIMIZATION_REPORT.md` |
-| Companion pipeline artifacts | `/mnt/c/Users/tbdk5/Desktop/MAIN/0_Working/git/Project/RISCV_RV32I_5STAGE/.analysis/pipeline_perf/programs/bubble_sort/pipeline` |
+| Artifact directory | `../../FPGA_Auto_Project/Project/RISCV_32I_SINGLE/.analysis/single_cycle_perf/programs/bubble_sort` |
+| Timing summary | `../../FPGA_Auto_Project/Project/RISCV_32I_SINGLE/.analysis/single_cycle_perf/programs/bubble_sort/actual_timing_summary.rpt` |
+| Parsed timing paths | `../../FPGA_Auto_Project/Project/RISCV_32I_SINGLE/.analysis/single_cycle_perf/programs/bubble_sort/actual_timing_paths.tsv` |
+| Top timing report | `../../FPGA_Auto_Project/Project/RISCV_32I_SINGLE/.analysis/single_cycle_perf/programs/bubble_sort/actual_timing_top100.rpt` |
+| Utilization summary | `../../FPGA_Auto_Project/Project/RISCV_32I_SINGLE/.analysis/single_cycle_perf/programs/bubble_sort/actual_utilization.rpt` |
+| Standalone report | `../RISCV_RV32I_SINGLE/md/SINGLE_CYCLE_OPTIMIZATION_REPORT.md` |
+| Companion pipeline artifacts | `.analysis/pipeline_perf/programs/bubble_sort/pipeline` |
 <!-- DETAIL_SECTION:single_cycle:bubble_sort:END -->
 
 ### Pipeline Performance Detail
 
 <!-- DETAIL_SECTION:pipeline_perf:bubble_sort:START -->
-- Source report: `C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\RISCV_RV32I_5STAGE\md\PIPELINE_PERF_REPORT.md`
+- Source report: `md/PIPELINE_PERF_REPORT.md`
 - Detail updated: `2026-05-06 02:35:33 대한민국 표준시`
 
 - Program key: `bubble_sort`
@@ -296,11 +296,11 @@
 
 | Evidence | Location |
 | --- | --- |
-| Artifact root | `C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\RISCV_RV32I_5STAGE\.analysis\pipeline_perf\programs\bubble_sort` |
-| Single-cycle artifacts | `C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\RISCV_RV32I_5STAGE\.analysis\pipeline_perf\programs\bubble_sort\single_cycle` |
-| 5-stage artifacts | `C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\RISCV_RV32I_5STAGE\.analysis\pipeline_perf\programs\bubble_sort\pipeline` |
-| Instruction-focus artifacts | `C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\RISCV_RV32I_5STAGE\.analysis\pipeline_perf\programs\bubble_sort\instruction_focus` |
-| Program memory | `C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\RISCV_RV32I_5STAGE\src\timing_programs\Bubble Sort.mem` |
-| Instruction source | `C:\Users\tbdk5\Desktop\MAIN\0_Working\git\Project\RISCV_RV32I_5STAGE\src\timing_programs\Bubble Sort.s` |
+| Artifact root | `.analysis/pipeline_perf/programs/bubble_sort` |
+| Single-cycle artifacts | `.analysis/pipeline_perf/programs/bubble_sort/single_cycle` |
+| 5-stage artifacts | `.analysis/pipeline_perf/programs/bubble_sort/pipeline` |
+| Instruction-focus artifacts | `.analysis/pipeline_perf/programs/bubble_sort/instruction_focus` |
+| Program memory | `src/timing_programs/Bubble Sort.mem` |
+| Instruction source | `src/timing_programs/Bubble Sort.s` |
 <!-- DETAIL_SECTION:pipeline_perf:bubble_sort:END -->
 <!-- PROGRAM_SECTION:bubble_sort:END -->

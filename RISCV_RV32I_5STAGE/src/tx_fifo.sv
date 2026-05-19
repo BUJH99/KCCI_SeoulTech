@@ -1,10 +1,10 @@
 /*
 [MODULE_INFO_START]
 Name: tx_fifo
-Role: UART ì†¡ì‹  ë°”ì´íŠ¸ë¥¼ ë²„í¼ë§í•˜ëŠ” FIFO ëª¨ë“ˆ
+Role: UART †¡‹  ë°”ì´Š¸ë¥ ë²„í¼ë§í•˜Š” FIFO ëª¨ë“ˆ
 Summary:
-  - ì†¡ì‹  ëŒ€ê¸° ë°ì´í„°ë¥¼ í í˜•íƒœë¡œ ì €ìž¥í•˜ê³  ì½ê¸° ì¸í„°íŽ˜ì´ìŠ¤ë¥¼ ì œê³µí•©ë‹ˆë‹¤.
-  - ë¹„ì–´ ìžˆìŒ/ê°€ë“ ì°¸ ìƒíƒœë¥¼ ì¶œë ¥í•´ ìƒìœ„ ì „ì†¡ ì œì–´ì™€ ì—°ë™í•©ë‹ˆë‹¤.
+  - †¡‹  ê¸ °´„°ë¥  ˜•ƒœë¡ ž¥•˜ê³ ½ê¸ ¸„°Ž˜´Š¤ë¥  œê³µí•©‹ˆ‹¤.
+  - ë¹„ì–´ žˆŒ/ê°“ ì° ƒƒœë¥ ì¶œë ¥•´ ƒœ„  „†¡  œ–´ —°™•©‹ˆ‹¤.
 [MODULE_INFO_END]
 */
 `timescale 1ns / 1ps
@@ -26,51 +26,51 @@ module tx_fifo #(
     localparam logic [LP_AW:0] LP_DEPTH_COUNT = (LP_AW + 1)'(P_DEPTH);
     localparam logic [LP_AW-1:0] LP_LAST_PTR = LP_AW'(P_DEPTH - 1);
 
-    logic [7:0] memFifo [0:P_DEPTH-1];
-    logic [LP_AW-1:0] ptrWr;
-    logic [LP_AW-1:0] ptrRd;
-    logic [LP_AW:0]   count;
+    logic [7:0] MemFifo [0:P_DEPTH-1];
+    logic [LP_AW-1:0] PtrWr;
+    logic [LP_AW-1:0] PtrRd;
+    logic [LP_AW:0]   Cnt;
     logic             WrEnInt;
     logic             RdEnInt;
     logic             PtrWrLast;
     logic             PtrRdLast;
 
-    assign oEmpty  = (count == '0);
-    assign oFull   = (count == LP_DEPTH_COUNT);
-    assign oRdData = memFifo[ptrRd];
+    assign oEmpty  = (Cnt == '0);
+    assign oFull   = (Cnt == LP_DEPTH_COUNT);
+    assign oRdData = MemFifo[PtrRd];
 
     assign WrEnInt   = iWrEn && !oFull;
     assign RdEnInt   = iRdEn && !oEmpty;
-    assign PtrWrLast = (ptrWr == LP_LAST_PTR);
-    assign PtrRdLast = (ptrRd == LP_LAST_PTR);
+    assign PtrWrLast = (PtrWr == LP_LAST_PTR);
+    assign PtrRdLast = (PtrRd == LP_LAST_PTR);
 
     always_ff @(posedge iClk or posedge iRst) begin
         if (iRst) begin
-            ptrWr <= '0;
-            ptrRd <= '0;
-            count <= '0;
+            PtrWr <= '0;
+            PtrRd <= '0;
+            Cnt <= '0;
         end else begin
             if (WrEnInt) begin
-                memFifo[ptrWr] <= iWrData;
+                MemFifo[PtrWr] <= iWrData;
                 if (PtrWrLast) begin
-                    ptrWr <= '0;
+                    PtrWr <= '0;
                 end else begin
-                    ptrWr <= ptrWr + 1'b1;
+                    PtrWr <= PtrWr + 1'b1;
                 end
             end
 
             if (RdEnInt) begin
                 if (PtrRdLast) begin
-                    ptrRd <= '0;
+                    PtrRd <= '0;
                 end else begin
-                    ptrRd <= ptrRd + 1'b1;
+                    PtrRd <= PtrRd + 1'b1;
                 end
             end
 
             unique case ({WrEnInt, RdEnInt})
-                2'b10:   count <= count + 1'b1;
-                2'b01:   count <= count - 1'b1;
-                default: count <= count;
+                2'b10:   Cnt <= Cnt + 1'b1;
+                2'b01:   Cnt <= Cnt - 1'b1;
+                default: Cnt <= Cnt;
             endcase
         end
     end

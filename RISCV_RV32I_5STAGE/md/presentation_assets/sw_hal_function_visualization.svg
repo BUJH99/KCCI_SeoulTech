@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1360" height="760" viewBox="0 0 1360 760" role="img" aria-labelledby="title desc">
+  <title id="title">HAL Function Visualization</title>
+  <desc id="desc">Visualization of HAL function names and how they become MMIO or CSR operations.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font: 700 24px Arial, sans-serif; fill: #111827; }
+      .label { font: 700 15px Arial, sans-serif; fill: #111827; }
+      .small { font: 12px Arial, sans-serif; fill: #374151; }
+      .code { font: 12px Consolas, monospace; fill: #111827; }
+      .box { fill: #ffffff; stroke: #334155; stroke-width: 2; rx: 8; }
+      .hal { fill: #dcfce7; stroke: #15803d; stroke-width: 2; rx: 8; }
+      .cpu { fill: #e0f2fe; stroke: #0369a1; stroke-width: 2; rx: 8; }
+      .bus { fill: #fef3c7; stroke: #b45309; stroke-width: 2; rx: 8; }
+      .reg { fill: #f3e8ff; stroke: #7e22ce; stroke-width: 2; rx: 8; }
+      .line { stroke: #334155; stroke-width: 2.2; fill: none; marker-end: url(#arrow); }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#334155"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="1360" height="760"/>
+  <text class="title" x="40" y="44">HAL: Complete soc_mmio.h Coverage</text>
+  <text class="small" x="40" y="68">All implemented HAL groups: APB bases, register offsets, bit masks, protocol constants, MMIO helpers, CSR helper, and INTC offset helpers.</text>
+
+  <rect class="box" x="70" y="120" width="250" height="130"/>
+  <text class="label" x="112" y="150">Driver or Application</text>
+  <text class="code" x="95" y="178">timer_init_100hz()</text>
+  <text class="code" x="95" y="200">service_claim()</text>
+  <text class="code" x="95" y="222">trap_handler()</text>
+
+  <rect class="hal" x="400" y="95" width="270" height="180"/>
+  <text class="label" x="474" y="126">HAL Symbol Groups</text>
+  <text class="code" x="425" y="154">SOC_APB_*_BASE</text>
+  <text class="code" x="425" y="176">UART/GPIO/I2C/SPI/FND/TIMER/INTC offsets</text>
+  <text class="code" x="425" y="198">I2C/SPI/TIMER bit masks</text>
+  <text class="code" x="425" y="220">SORT_TRACE / SORT_SLAVE constants</text>
+  <text class="code" x="425" y="242">MCAUSE / MIE / MSTATUS masks</text>
+
+  <rect class="hal" x="750" y="95" width="250" height="180"/>
+  <text class="label" x="812" y="126">HAL Helper Functions</text>
+  <text class="code" x="780" y="158">mmio_write32(addr, value)</text>
+  <text class="small" x="780" y="180">volatile 32-bit store</text>
+  <text class="code" x="780" y="212">mmio_read32(addr)</text>
+  <text class="small" x="780" y="234">volatile 32-bit load</text>
+  <text class="code" x="780" y="258">csr_read_mcause()</text>
+  <text class="small" x="780" y="274">intc_priority/vector_offset()</text>
+
+  <rect class="cpu" x="1080" y="120" width="210" height="130"/>
+  <text class="label" x="1128" y="150">CPU Operation</text>
+  <text class="code" x="1115" y="178">lw / sw</text>
+  <text class="small" x="1115" y="200">MMIO address access</text>
+  <text class="code" x="1115" y="224">csrr mcause</text>
+
+  <rect class="bus" x="250" y="370" width="260" height="116"/>
+  <text class="label" x="318" y="400">Data Bus Path</text>
+  <text class="small" x="278" y="426">DataBusInterconnect</text>
+  <text class="small" x="278" y="446">DataBusAxiLiteMaster</text>
+  <text class="small" x="278" y="466">AxiLiteToApbBridge</text>
+
+  <rect class="reg" x="610" y="345" width="300" height="166"/>
+  <text class="label" x="720" y="376">APB Register</text>
+  <text class="code" x="645" y="406">Timer STATUS = 0x4000_6004</text>
+  <text class="code" x="645" y="430">INTC CLAIM   = 0x4000_3008</text>
+  <text class="code" x="645" y="454">FND DIGITS   = 0x4000_5000</text>
+  <text class="small" x="645" y="482">PSEL/PENABLE/PWRITE/PADDR/PWDATA</text>
+
+  <rect class="box" x="1010" y="370" width="250" height="116"/>
+  <text class="label" x="1084" y="400">Meaning</text>
+  <text class="small" x="1038" y="426">write register field</text>
+  <text class="small" x="1038" y="448">read status or data</text>
+  <text class="small" x="1038" y="470">clear sticky W1C bit</text>
+
+  <rect class="hal" x="90" y="585" width="380" height="104"/>
+  <text class="label" x="118" y="616">Address Naming Layer</text>
+  <text class="code" x="118" y="646">SOC_APB_*_BASE + REGISTER_OFFSET</text>
+  <text class="code" x="118" y="668">= final APB MMIO address</text>
+
+  <rect class="hal" x="520" y="585" width="360" height="104"/>
+  <text class="label" x="548" y="616">Register Field Layer</text>
+  <text class="code" x="548" y="646">*_CTRL / *_STATUS / *_IRQ masks</text>
+  <text class="code" x="548" y="668">name individual control/status bits</text>
+
+  <rect class="hal" x="930" y="585" width="330" height="104"/>
+  <text class="label" x="958" y="616">Operation Helper Layer</text>
+  <text class="code" x="958" y="646">mmio_read32 / mmio_write32 / csr_read_mcause</text>
+  <text class="small" x="958" y="668">perform APB load/store or CSR read</text>
+
+  <path class="line" d="M320 185 H400"/>
+  <path class="line" d="M670 185 H750"/>
+  <path class="line" d="M1000 185 H1080"/>
+  <path class="line" d="M1185 250 C1185 315 380 315 380 370"/>
+  <path class="line" d="M510 428 H610"/>
+  <path class="line" d="M910 428 H1010"/>
+  <path class="line" d="M280 585 C280 530 645 530 710 511"/>
+  <path class="line" d="M700 585 C700 540 735 530 760 511"/>
+  <path class="line" d="M1095 585 C1095 520 940 500 910 454"/>
+</svg>

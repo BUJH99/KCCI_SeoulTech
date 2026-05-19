@@ -25,8 +25,8 @@ module MemoryStage (
   // ==== 1. Memory Access Signals ====
   
   logic [31:0] MemAddr;
-  logic        MemReadEn;
-  logic        MemWriteEn;
+  logic        MemRdEn;
+  logic        MemWrEn;
   logic        BusReqValid;
   logic [3:0]  ByteEn;
   logic [31:0] WrData;
@@ -43,8 +43,8 @@ module MemoryStage (
   TrapCauseE   MemTrapCause;
 
   // Verify memory accesses are only triggered by non-killed valid instructions
-  assign MemReadEn          = iEXMEM.Valid && !iEXMEM.Kill && iEXMEM.MemRead;
-  assign MemWriteEn         = iEXMEM.Valid && !iEXMEM.Kill && iEXMEM.MemWrite;
+  assign MemRdEn          = iEXMEM.Valid && !iEXMEM.Kill && iEXMEM.MemRead;
+  assign MemWrEn         = iEXMEM.Valid && !iEXMEM.Kill && iEXMEM.MemWrite;
   assign MemAddr            = iEXMEM.AluResult;
   assign MemRdData          = MemLoadData;
   assign BusRspReady        = iDataBusRsp.RspReady;
@@ -52,13 +52,13 @@ module MemoryStage (
 
   assign MemAddrMisalign    = ((iEXMEM.MemSize == MEM_HALF) &&  MemAddr[0])
                            || ((iEXMEM.MemSize == MEM_WORD) && (MemAddr[1:0] != 2'b00));
-  assign LoadMisalign       = MemReadEn  && MemAddrMisalign;
-  assign StoreMisalign      = MemWriteEn && MemAddrMisalign;
+  assign LoadMisalign       = MemRdEn  && MemAddrMisalign;
+  assign StoreMisalign      = MemWrEn && MemAddrMisalign;
 
   // ==== 2. Store Data Formatting ====
 
   StoreFormatter uStoreFormatter (
-    .iMemWrite   (MemWriteEn),
+    .iMemWr   (MemWrEn),
     .iMemSize    (iEXMEM.MemSize),
     .iAddr       (MemAddr),
     .iStoreData  (iEXMEM.StoreData),
@@ -69,13 +69,13 @@ module MemoryStage (
 
   // ==== 3. Fabric Request ====
 
-  assign BusReqValid           = (MemReadEn || MemWriteEn)
+  assign BusReqValid           = (MemRdEn || MemWrEn)
                               && !LoadMisalign
                               && !StoreMisalign
                               && (iEXMEM.TrapCause == TRAP_NONE);
 
   assign oDataBusReq.ReqValid  = BusReqValid;
-  assign oDataBusReq.ReqWrite  = MemWriteEn;
+  assign oDataBusReq.ReqWr  = MemWrEn;
   assign oDataBusReq.ReqAddr   = MemAddr;
   assign oDataBusReq.ReqByteEn = ByteEn;
   assign oDataBusReq.ReqWdata  = WrData;
@@ -84,7 +84,7 @@ module MemoryStage (
   // ==== 4. Load Data Formatting ====
 
   LoadFormatter uLoadFormatter (
-    .iMemRead      (MemReadEn),
+    .iMemRd      (MemRdEn),
     .iMemSize      (iEXMEM.MemSize),
     .iLoadUnsigned (iEXMEM.LoadUnsigned),
     .iAddr         (MemAddr),
@@ -99,8 +99,8 @@ module MemoryStage (
     .iValid            (iEXMEM.Valid),
     .iKill             (iEXMEM.Kill),
     .iIncomingTrapCause(iEXMEM.TrapCause),
-    .iMemReadEn        (MemReadEn),
-    .iMemWriteEn       (MemWriteEn),
+    .iMemRdEn        (MemRdEn),
+    .iMemWrEn       (MemWrEn),
     .iBusReqValid      (BusReqValid),
     .iBusRspErr        (BusRspErr),
     .iLoadMisalign     (LoadMisalign),

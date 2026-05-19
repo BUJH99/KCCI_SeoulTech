@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1300" width="1000" height="1300">
+          <defs>
+            <!-- Academic Standard Solid Arrow -->
+            <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#000000" />
+            </marker>
+          </defs>
+
+          <style>
+            /* 학술지 스타일 CSS (Black &amp; White, Crisp Lines) */
+            .state-node { fill: #ffffff; stroke: #000000; stroke-width: 2.5px; }
+            .state-text { font-family: 'Arial', sans-serif; font-weight: bold; font-size: 15px; fill: #000000; text-anchor: middle; }
+            
+            .edge-solid { fill: none; stroke: #000000; stroke-width: 1.5px; marker-end: url(#arrow); }
+            
+            .edge-label { 
+                font-family: 'Arial', sans-serif; 
+                font-size: 15px; 
+                font-weight: normal; 
+                fill: #000000; 
+                text-anchor: middle; 
+                paint-order: stroke; 
+                stroke: #ffffff; 
+                stroke-width: 7px; 
+                stroke-linecap: round; 
+                stroke-linejoin: round; 
+            }
+            .title-text { font-family: 'Arial', sans-serif; font-weight: bold; font-size: 22px; fill: #000000; text-anchor: middle; }
+          </style>
+
+
+          <!-- ==================== TRANSITION EDGES ==================== -->
+          
+          <!-- 1. IDLE -> AXI_WRITE_ACCEPT (Left Branch 1) -->
+          <path class="edge-solid" d="M 437 213 L 313 337" />
+
+          <!-- 2. IDLE -> APB_WRITE_SETUP (Left Branch 2 - Direct bypass) -->
+          <path class="edge-solid" d="M 460 230 L 290 570" />
+
+          <!-- 3. AXI_WRITE_ACCEPT -> APB_WRITE_SETUP -->
+          <path class="edge-solid" d="M 250 490 L 250 560" />
+
+          <!-- 4. APB_WRITE_SETUP -> APB_WRITE_ACCESS -->
+          <path class="edge-solid" d="M 250 740 L 250 810" />
+
+          <!-- 5. APB_WRITE_ACCESS -> AXI_WRITE_RESP -->
+          <path class="edge-solid" d="M 250 990 L 250 1060" />
+
+          <!-- 6. AXI_WRITE_RESP -> IDLE (Return Path) -->
+          <!-- Q 커브를 사용하여 왼쪽 외곽으로 크게 돌아가게 배치 -->
+          <path class="edge-solid" d="M 160 1110 Q 20 600 410 110" />
+
+
+          <!-- 7. IDLE -> APB_READ_SETUP (Right Branch) -->
+          <path class="edge-solid" d="M 552 223 L 698 427" />
+
+          <!-- 8. APB_READ_SETUP -> APB_READ_ACCESS -->
+          <path class="edge-solid" d="M 750 590 L 750 710" />
+
+          <!-- 9. APB_READ_ACCESS -> AXI_READ_RESP -->
+          <path class="edge-solid" d="M 750 890 L 750 1010" />
+
+          <!-- 10. AXI_READ_RESP -> IDLE (Return Path) -->
+          <!-- Q 커브를 사용하여 오른쪽 외곽으로 크게 돌아가게 배치 -->
+          <path class="edge-solid" d="M 840 1060 Q 980 600 590 110" />
+
+
+          <!-- ==================== STATE NODES (PERFECT CIRCLES, R=90) ==================== -->
+
+          <!-- 1. IDLE (Top Center) -->
+          <g transform="translate(500, 150)">
+            <circle class="state-node" cx="0" cy="0" r="90" />
+            <text class="state-text" x="0" y="5">IDLE</text>
+          </g>
+
+          <!-- ================= WRITE PATH (LEFT) ================= -->
+          <!-- 2. AXI_WRITE_ACCEPT -->
+          <g transform="translate(250, 400)">
+            <circle class="state-node" cx="0" cy="0" r="90" />
+            <text class="state-text" x="0" y="-8">AXI_WRITE_</text>
+            <text class="state-text" x="0" y="16">ACCEPT</text>
+          </g>
+
+          <!-- 3. APB_WRITE_SETUP -->
+          <g transform="translate(250, 650)">
+            <circle class="state-node" cx="0" cy="0" r="90" />
+            <text class="state-text" x="0" y="-8">APB_WRITE_</text>
+            <text class="state-text" x="0" y="16">SETUP</text>
+          </g>
+
+          <!-- 4. APB_WRITE_ACCESS -->
+          <g transform="translate(250, 900)">
+            <circle class="state-node" cx="0" cy="0" r="90" />
+            <text class="state-text" x="0" y="-8">APB_WRITE_</text>
+            <text class="state-text" x="0" y="16">ACCESS</text>
+          </g>
+
+          <!-- 5. AXI_WRITE_RESP -->
+          <g transform="translate(250, 1150)">
+            <circle class="state-node" cx="0" cy="0" r="90" />
+            <text class="state-text" x="0" y="-8">AXI_WRITE_</text>
+            <text class="state-text" x="0" y="16">RESP</text>
+          </g>
+
+          <!-- ================= READ PATH (RIGHT) ================= -->
+          <!-- 6. APB_READ_SETUP -->
+          <g transform="translate(750, 500)">
+            <circle class="state-node" cx="0" cy="0" r="90" />
+            <text class="state-text" x="0" y="-8">APB_READ_</text>
+            <text class="state-text" x="0" y="16">SETUP</text>
+          </g>
+
+          <!-- 7. APB_READ_ACCESS -->
+          <g transform="translate(750, 800)">
+            <circle class="state-node" cx="0" cy="0" r="90" />
+            <text class="state-text" x="0" y="-8">APB_READ_</text>
+            <text class="state-text" x="0" y="16">ACCESS</text>
+          </g>
+
+          <!-- 8. AXI_READ_RESP -->
+          <g transform="translate(750, 1100)">
+            <circle class="state-node" cx="0" cy="0" r="90" />
+            <text class="state-text" x="0" y="-8">AXI_READ_</text>
+            <text class="state-text" x="0" y="16">RESP</text>
+          </g>
+
+
+          <!-- ==================== TRANSITION LABELS ==================== -->
+
+          <!-- IDLE -> AXI_WRITE_ACCEPT -->
+          <text class="edge-label" style="text-anchor: end;" x="320" y="260">
+            <tspan x="320" dy="0">writeSelected &amp;&amp;</tspan>
+            <tspan x="320" dy="18">!(awHs &amp;&amp; wHs)</tspan>
+          </text>
+
+          <!-- IDLE -> APB_WRITE_SETUP -->
+          <text class="edge-label" style="text-anchor: start;" x="390" y="390">
+            <tspan x="390" dy="0">writeSelected</tspan>
+            <tspan x="390" dy="18">&amp;&amp; awHandshake</tspan>
+            <tspan x="390" dy="18">&amp;&amp; wHandshake</tspan>
+          </text>
+
+          <!-- AXI_WRITE_ACCEPT -> APB_WRITE_SETUP -->
+          <!-- 선과 겹치지 않게 우측 라인 바깥으로 위치를 조절 (text-anchor: end 사용) -->
+          <text class="edge-label" style="text-anchor: end;" x="235" y="520">
+            <tspan x="235" dy="0">(awDone || awHandshake)</tspan>
+            <tspan x="235" dy="18">&amp;&amp; (wDone || wHandshake)</tspan>
+          </text>
+
+          <!-- APB_WRITE_SETUP -> APB_WRITE_ACCESS -->
+          <text class="edge-label" style="text-anchor: start;" x="265" y="780">(1 Cycle)</text>
+
+          <!-- APB_WRITE_ACCESS -> AXI_WRITE_RESP -->
+          <text class="edge-label" style="text-anchor: start;" x="265" y="1030">AccessComplete</text>
+
+          <!-- AXI_WRITE_RESP -> IDLE -->
+          <text class="edge-label" x="100" y="600">iAxiBready</text>
+
+          <!-- IDLE -> APB_READ_SETUP -->
+          <text class="edge-label" style="text-anchor: start;" x="640" y="310">
+            <tspan x="640" dy="0">arHandshake</tspan>
+          </text>
+
+          <!-- APB_READ_SETUP -> APB_READ_ACCESS -->
+          <text class="edge-label" style="text-anchor: start;" x="765" y="655">(1 Cycle)</text>
+
+          <!-- APB_READ_ACCESS -> AXI_READ_RESP -->
+          <text class="edge-label" style="text-anchor: start;" x="765" y="955">AccessComplete</text>
+
+          <!-- AXI_READ_RESP -> IDLE -->
+          <text class="edge-label" x="900" y="600">iAxiRready</text>
+
+        </svg>

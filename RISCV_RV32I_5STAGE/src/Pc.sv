@@ -12,7 +12,7 @@ Summary:
 
 module Pc (
   input  logic        iClk,
-  input  logic        iRstn,
+  input  logic        iRst,
   input  logic        iPcWe,
   input  logic [31:0] iNextPc,
   
@@ -23,8 +23,8 @@ module Pc (
   
   // The PC is updated sequentially based on write enable.
   // It resets to address 0 asynchronously to ensure clean boot state.
-  always_ff @(posedge iClk or negedge iRstn) begin
-    if (!iRstn) begin
+  always_ff @(posedge iClk or posedge iRst) begin
+    if (iRst) begin
       oPc <= '0;
     end else if (iPcWe) begin
       oPc <= iNextPc;

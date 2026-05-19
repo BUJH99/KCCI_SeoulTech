@@ -14,10 +14,10 @@ Summary:
 module IntcVectorTable #(
   parameter int unsigned P_NUM_SOURCES = 2
 ) (
-  input  logic        iVectorEnable,
+  input  logic        iVectorEn,
   input  logic [((P_NUM_SOURCES + 1) * 32)-1:0] iVectorEntryFlat,
-  input  logic        iSelectedSourceValid,
-  input  logic [31:0] iSelectedSourceId,
+  input  logic        iSelSrcValid,
+  input  logic [31:0] iSelSrcId,
 
   output logic        oVectorValid,
   output logic [31:0] oVectorPc
@@ -32,14 +32,14 @@ module IntcVectorTable #(
     TableEntryPc = '0;
 
     for (EntryIdx = 0; EntryIdx < LP_NUM_VECTOR_ENTRIES; EntryIdx = EntryIdx + 1) begin
-      if (iSelectedSourceId == (EntryIdx + 32'd0)) begin
+      if (iSelSrcId == (EntryIdx + 32'd0)) begin
         TableEntryPc = iVectorEntryFlat[(EntryIdx * 32) +: 32];
       end
     end
 
-    oVectorValid = iVectorEnable
-                && iSelectedSourceValid
-                && (iSelectedSourceId != 32'd0)
+    oVectorValid = iVectorEn
+                && iSelSrcValid
+                && (iSelSrcId != 32'd0)
                 && (TableEntryPc[31:2] != 30'd0);
     oVectorPc    = {TableEntryPc[31:2], 2'b00};
   end

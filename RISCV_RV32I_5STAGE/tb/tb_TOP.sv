@@ -19,6 +19,7 @@ module tb_TOP;
   localparam logic [31:0] LP_NOP_INSTR     = 32'h0000_0013;
   localparam logic [31:0] LP_BENCH_DONE_PC = 32'h0000_0168;
   localparam logic [31:0] LP_TRAP_VECTOR   = 32'h0000_0040;
+  localparam string       LP_BENCH_INIT_FILE = "C:/Users/tbdk5/Desktop/MAIN/0_Working/git/Project/RISCV_RV32I_5STAGE/src/InstructionFORTIMING.mem";
   localparam int unsigned LP_ROM_DEPTH     = 256;
   localparam int unsigned LP_RAM_DEPTH     = 256;
   localparam int unsigned LP_SIM_CLK_HZ    = 153_600;
@@ -33,19 +34,19 @@ module tb_TOP;
   localparam logic [31:0] LP_INTC_REG_PRIORITY_GPIO = 32'h0000_0024;
   localparam logic [31:0] LP_INTC_REG_PRIORITY_UART = 32'h0000_0028;
   localparam logic [31:0] LP_INTC_REG_VECTOR_ENTRY0 = 32'h0000_0080;
+  localparam logic [1:0]  LP_AXI_RESP_OKAY          = 2'b00;
+  localparam logic [1:0]  LP_AXI_RESP_SLVERR        = 2'b10;
 
   logic iClk;
-  logic iRstn;
+  logic iRst;
   logic iUartRx;
   logic [LP_GPIO_WIDTH-1:0] iGpioIn;
-  logic iI2cSdaIn;
   logic iSpiMiso;
+  tri1  ioI2cScl;
+  tri1  ioI2cSda;
   logic oUartTx;
   logic [LP_GPIO_WIDTH-1:0] oGpioOut;
   logic [LP_GPIO_WIDTH-1:0] oGpioOe;
-  logic oI2cScl;
-  logic oI2cSdaOut;
-  logic oI2cSdaOe;
   logic oSpiSclk;
   logic oSpiMosi;
   logic oSpiCsN;
@@ -57,22 +58,23 @@ module tb_TOP;
   int unsigned CycleCount;
 
   TOP #(
-    .P_CLK_HZ     (LP_SIM_CLK_HZ),
-    .P_UART_BAUD  (LP_UART_BAUD),
-    .P_GPIO_WIDTH (LP_GPIO_WIDTH)
+    .P_CLK_HZ         (LP_SIM_CLK_HZ),
+    .P_SYS_CLK_DIVIDE (1),
+    .P_UART_BAUD      (LP_UART_BAUD),
+    .P_GPIO_WIDTH     (LP_GPIO_WIDTH),
+    .P_INSTR_INIT_FILE    (LP_BENCH_INIT_FILE),
+    .P_UART_RESET_CPU_MODE(1'b1)
   ) dut (
     .iClk        (iClk),
-    .iRstn       (iRstn),
+    .iRst       (iRst),
     .iUartRx     (iUartRx),
     .iGpioIn     (iGpioIn),
-    .iI2cSdaIn   (iI2cSdaIn),
     .iSpiMiso    (iSpiMiso),
+    .ioI2cScl    (ioI2cScl),
+    .ioI2cSda    (ioI2cSda),
     .oUartTx     (oUartTx),
     .oGpioOut    (oGpioOut),
     .oGpioOe     (oGpioOe),
-    .oI2cScl     (oI2cScl),
-    .oI2cSdaOut  (oI2cSdaOut),
-    .oI2cSdaOe   (oI2cSdaOe),
     .oSpiSclk    (oSpiSclk),
     .oSpiMosi    (oSpiMosi),
     .oSpiCsN     (oSpiCsN),
@@ -90,10 +92,9 @@ module tb_TOP;
 
   initial begin
     iClk       = 1'b0;
-    iRstn      = 1'b0;
+    iRst      = 1'b1;
     iUartRx    = 1'b1;
     iGpioIn    = '0;
-    iI2cSdaIn  = 1'b1;
     iSpiMiso   = 1'b0;
     CycleCount = 0;
   end
@@ -112,11 +113,14 @@ module tb_TOP;
     RunFenceAndX0Test();
     RunGpioMmioTest();
     RunApbZeroWaitProtocolTest();
+    RunAxiMmioWriteIntegrationTest();
+    RunAxiMmioReadIntegrationTest();
     RunApbWaitStateHoldTest();
     RunCsrOpsTest();
     RunMretRedirectTest();
     RunUartTxMmioTest();
     RunAccessFaultTest();
+    RunAxiMmioLocalErrorTrapTest();
     RunUartInterruptTest();
     RunGpioInterruptTest();
     RunMtvecVectoredInterruptTest();
@@ -327,7 +331,7 @@ module tb_TOP;
     integer Idx;
     begin
       for (Idx = 0; Idx < LP_ROM_DEPTH; Idx = Idx + 1) begin
-        dut.uInstrRom.MemRom[Idx] = LP_NOP_INSTR;
+        dut.uInstrFetchMemory.uInstrRom.gen_direct_rom.MemRom[Idx] = LP_NOP_INSTR;
       end
     end
   endtask
@@ -343,7 +347,7 @@ module tb_TOP;
 
   task automatic HoldResetAndClear;
     begin
-      iRstn = 1'b0;
+      iRst = 1'b1;
       iUartRx = 1'b1;
       iGpioIn = '0;
       ClearInstrRom();
@@ -354,7 +358,7 @@ module tb_TOP;
 
   task automatic HoldResetAndClearDataOnly;
     begin
-      iRstn = 1'b0;
+      iRst = 1'b1;
       iUartRx = 1'b1;
       iGpioIn = '0;
       ClearDataRam();
@@ -364,7 +368,10 @@ module tb_TOP;
 
   task automatic ReleaseReset;
     begin
-      iRstn = 1'b1;
+      iRst = 1'b0;
+      wait (dut.SysClkLocked === 1'b1);
+      wait (dut.SysRst === 1'b0);
+      @(posedge iClk);
     end
   endtask
 
@@ -373,7 +380,7 @@ module tb_TOP;
     input logic [31:0] iInstr
   );
     begin
-      dut.uInstrRom.MemRom[iPc[9:2]] = iInstr;
+      dut.uInstrFetchMemory.uInstrRom.gen_direct_rom.MemRom[iPc[9:2]] = iInstr;
     end
   endtask
 
@@ -443,7 +450,7 @@ module tb_TOP;
         dut.ExtIrqPending,
         dut.IntcVectorValid,
         dut.IntcVectorPc,
-        dut.IntcSelectedSourceId,
+        dut.IntcSelSrcId,
         dut.UartIrq,
         dut.GpioIrq
       );
@@ -534,6 +541,201 @@ module tb_TOP;
       end
 
       $fatal(1, "[FAIL] %s: GPIO APB access phase not observed within %0d cycles", iContext, iBudgetCycles);
+    end
+  endtask
+
+  task automatic WaitForGpioApbReadSetup(
+    input logic [11:0] iExpectedAddr,
+    input int unsigned iBudgetCycles,
+    input string       iContext
+  );
+    int unsigned WaitIdx;
+    begin
+      for (WaitIdx = 0; WaitIdx < iBudgetCycles; WaitIdx = WaitIdx + 1) begin
+        @(negedge iClk);
+        if (dut.GpioPsel && !dut.ApbPenable && !dut.ApbPwrite) begin
+          CheckEq32({20'd0, dut.ApbPaddr}, {20'd0, iExpectedAddr}, $sformatf("%s read setup addr", iContext));
+          CheckEq32({28'd0, dut.ApbPstrb}, 32'd0, $sformatf("%s read setup strb", iContext));
+          return;
+        end
+      end
+
+      $fatal(1, "[FAIL] %s: GPIO APB read setup phase not observed within %0d cycles", iContext, iBudgetCycles);
+    end
+  endtask
+
+  task automatic WaitForGpioApbReadAccess(
+    input logic [11:0] iExpectedAddr,
+    input logic        iExpectedReady,
+    input int unsigned iBudgetCycles,
+    input string       iContext
+  );
+    int unsigned WaitIdx;
+    begin
+      for (WaitIdx = 0; WaitIdx < iBudgetCycles; WaitIdx = WaitIdx + 1) begin
+        @(negedge iClk);
+        if (dut.GpioPsel && dut.ApbPenable && !dut.ApbPwrite) begin
+          CheckEq32({20'd0, dut.ApbPaddr}, {20'd0, iExpectedAddr}, $sformatf("%s read access addr", iContext));
+          CheckEq32({28'd0, dut.ApbPstrb}, 32'd0, $sformatf("%s read access strb", iContext));
+          CheckEq1(dut.DataBusRsp.RspReady, iExpectedReady, $sformatf("%s read access ready", iContext));
+          return;
+        end
+      end
+
+      $fatal(1, "[FAIL] %s: GPIO APB read access phase not observed within %0d cycles", iContext, iBudgetCycles);
+    end
+  endtask
+
+  task automatic WaitForAxiWriteHandshake(
+    input logic [31:0] iExpectedAddr,
+    input logic [3:0]  iExpectedStrb,
+    input logic [31:0] iExpectedWdata,
+    input int unsigned iBudgetCycles,
+    input string       iContext
+  );
+    int unsigned WaitIdx;
+    begin
+      for (WaitIdx = 0; WaitIdx < iBudgetCycles; WaitIdx = WaitIdx + 1) begin
+        @(negedge iClk);
+        if (dut.AxiAwvalid && dut.AxiWvalid) begin
+          CheckEq1(dut.AxiAwready, 1'b1, $sformatf("%s AWREADY", iContext));
+          CheckEq1(dut.AxiWready, 1'b1, $sformatf("%s WREADY", iContext));
+          CheckEq32(dut.AxiAwaddr, iExpectedAddr, $sformatf("%s AWADDR", iContext));
+          CheckEq32(dut.AxiWdata, iExpectedWdata, $sformatf("%s WDATA", iContext));
+          CheckEq32({28'd0, dut.AxiWstrb}, {28'd0, iExpectedStrb}, $sformatf("%s WSTRB", iContext));
+          CheckEq32({29'd0, dut.AxiAwprot}, 32'd0, $sformatf("%s AWPROT", iContext));
+          CheckEq1(dut.GpioPsel, 1'b0, $sformatf("%s APB not started during AXI write accept", iContext));
+          CheckEq1(dut.AxiBvalid, 1'b0, $sformatf("%s no early BVALID", iContext));
+          return;
+        end
+      end
+
+      $fatal(1, "[FAIL] %s: AXI write handshake not observed within %0d cycles", iContext, iBudgetCycles);
+    end
+  endtask
+
+  task automatic WaitForAxiWriteResponse(
+    input logic [1:0]  iExpectedResp,
+    input logic        iExpectedErr,
+    input int unsigned iBudgetCycles,
+    input string       iContext
+  );
+    int unsigned WaitIdx;
+    begin
+      for (WaitIdx = 0; WaitIdx < iBudgetCycles; WaitIdx = WaitIdx + 1) begin
+        @(negedge iClk);
+        if (dut.AxiBvalid) begin
+          CheckEq1(dut.AxiBready, 1'b1, $sformatf("%s BREADY", iContext));
+          CheckEq32({30'd0, dut.AxiBresp}, {30'd0, iExpectedResp}, $sformatf("%s BRESP", iContext));
+          CheckEq1(dut.DataBusRsp.RspReady, 1'b1, $sformatf("%s native ready", iContext));
+          CheckEq1(dut.DataBusRsp.RspErr, iExpectedErr, $sformatf("%s native error", iContext));
+          CheckEq1(dut.ApbPenable, 1'b0, $sformatf("%s APB access finished before BVALID", iContext));
+          return;
+        end
+      end
+
+      $fatal(1, "[FAIL] %s: AXI write response not observed within %0d cycles", iContext, iBudgetCycles);
+    end
+  endtask
+
+  task automatic WaitForAxiReadHandshake(
+    input logic [31:0] iExpectedAddr,
+    input int unsigned iBudgetCycles,
+    input string       iContext
+  );
+    int unsigned WaitIdx;
+    begin
+      for (WaitIdx = 0; WaitIdx < iBudgetCycles; WaitIdx = WaitIdx + 1) begin
+        @(negedge iClk);
+        if (dut.AxiArvalid) begin
+          CheckEq1(dut.AxiArready, 1'b1, $sformatf("%s ARREADY", iContext));
+          CheckEq32(dut.AxiAraddr, iExpectedAddr, $sformatf("%s ARADDR", iContext));
+          CheckEq32({29'd0, dut.AxiArprot}, 32'd0, $sformatf("%s ARPROT", iContext));
+          CheckEq1(dut.GpioPsel, 1'b0, $sformatf("%s APB not started during AXI read accept", iContext));
+          CheckEq1(dut.AxiRvalid, 1'b0, $sformatf("%s no early RVALID", iContext));
+          return;
+        end
+      end
+
+      $fatal(1, "[FAIL] %s: AXI read handshake not observed within %0d cycles", iContext, iBudgetCycles);
+    end
+  endtask
+
+  task automatic WaitForAxiReadResponse(
+    input logic [31:0] iExpectedRdata,
+    input logic [1:0]  iExpectedResp,
+    input logic        iExpectedErr,
+    input int unsigned iBudgetCycles,
+    input string       iContext
+  );
+    int unsigned WaitIdx;
+    begin
+      for (WaitIdx = 0; WaitIdx < iBudgetCycles; WaitIdx = WaitIdx + 1) begin
+        @(negedge iClk);
+        if (dut.AxiRvalid) begin
+          CheckEq1(dut.AxiRready, 1'b1, $sformatf("%s RREADY", iContext));
+          CheckEq32(dut.AxiRdata, iExpectedRdata, $sformatf("%s RDATA", iContext));
+          CheckEq32({30'd0, dut.AxiRresp}, {30'd0, iExpectedResp}, $sformatf("%s RRESP", iContext));
+          CheckEq1(dut.DataBusRsp.RspReady, 1'b1, $sformatf("%s native ready", iContext));
+          CheckEq32(dut.DataBusRsp.RspRdata, iExpectedRdata, $sformatf("%s native rdata", iContext));
+          CheckEq1(dut.DataBusRsp.RspErr, iExpectedErr, $sformatf("%s native error", iContext));
+          CheckEq1(dut.ApbPenable, 1'b0, $sformatf("%s APB access finished before RVALID", iContext));
+          return;
+        end
+      end
+
+      $fatal(1, "[FAIL] %s: AXI read response not observed within %0d cycles", iContext, iBudgetCycles);
+    end
+  endtask
+
+  task automatic WaitForAxiLocalErrorApbSetup(
+    input int unsigned iBudgetCycles,
+    input string       iContext
+  );
+    int unsigned WaitIdx;
+    begin
+      for (WaitIdx = 0; WaitIdx < iBudgetCycles; WaitIdx = WaitIdx + 1) begin
+        @(negedge iClk);
+        if (!dut.ApbPenable
+         && !dut.UartPsel
+         && !dut.GpioPsel
+         && !dut.I2cPsel
+         && !dut.IntcPsel
+         && !dut.SpiPsel
+         && !dut.FndPsel
+         && (dut.ApbPaddr == 12'h000)) begin
+          CheckEq1(dut.ApbPwrite, 1'b0, $sformatf("%s local setup is read", iContext));
+          return;
+        end
+      end
+
+      $fatal(1, "[FAIL] %s: AXI/APB local-error setup not observed within %0d cycles", iContext, iBudgetCycles);
+    end
+  endtask
+
+  task automatic WaitForAxiLocalErrorApbAccess(
+    input int unsigned iBudgetCycles,
+    input string       iContext
+  );
+    int unsigned WaitIdx;
+    begin
+      for (WaitIdx = 0; WaitIdx < iBudgetCycles; WaitIdx = WaitIdx + 1) begin
+        @(negedge iClk);
+        if (dut.ApbPenable
+         && !dut.UartPsel
+         && !dut.GpioPsel
+         && !dut.I2cPsel
+         && !dut.IntcPsel
+         && !dut.SpiPsel
+         && !dut.FndPsel
+         && (dut.ApbPaddr == 12'h000)) begin
+          CheckEq1(dut.ApbPwrite, 1'b0, $sformatf("%s local access is read", iContext));
+          CheckEq1(dut.DataBusRsp.RspReady, 1'b0, $sformatf("%s local access waits for AXI response", iContext));
+          return;
+        end
+      end
+
+      $fatal(1, "[FAIL] %s: AXI/APB local-error access not observed within %0d cycles", iContext, iBudgetCycles);
     end
   endtask
 
@@ -881,15 +1083,58 @@ module tb_TOP;
       @(posedge iClk);
       CheckEq1(dut.GpioPsel, 1'b1, "GPIO access selects slave");
       CheckEq1(dut.ApbPenable, 1'b1, "GPIO access PENABLE high");
-      CheckEq1(dut.DataBusRsp.RspReady, 1'b1, "GPIO zero-wait access ready");
-      CheckEq1(dut.uRv32iCore.MemApbStall, 1'b0, "GPIO zero-wait no stall");
+      CheckEq1(dut.DataBusRsp.RspReady, 1'b0, "GPIO zero-wait access waits for AXI response");
+      CheckEq1(dut.uRv32iCore.MemApbStall, 1'b1, "GPIO zero-wait access stalls until AXI response");
 
       @(posedge iClk);
       CheckEq1(dut.GpioPsel, 1'b0, "GPIO post-access deasserts PSEL");
       CheckEq1(dut.ApbPenable, 1'b0, "GPIO post-access deasserts PENABLE");
+      CheckEq1(dut.DataBusRsp.RspReady, 1'b1, "GPIO zero-wait AXI response ready");
+      CheckEq1(dut.uRv32iCore.MemApbStall, 1'b0, "GPIO zero-wait AXI response releases stall");
 
       WaitForRetirePc(32'd16, 120, "GPIO zero-wait final loop");
       CheckEq32({24'd0, oGpioOut}, 32'h0000_00A5, "GPIO zero-wait writeback");
+    end
+  endtask
+
+  task automatic RunAxiMmioWriteIntegrationTest;
+    begin
+      HoldResetAndClear();
+      LoadRomWord(32'd4,  EncLui(5'd1, 20'h40001));
+      LoadRomWord(32'd8,  EncAddi(5'd2, 5'd0, 165));
+      LoadRomWord(32'd12, EncStore(5'd2, 5'd1, 0, 3'b010));
+      LoadRomWord(32'd16, 32'h0000_006F);
+      ReleaseReset();
+
+      WaitForAxiWriteHandshake(32'h4000_1000, 4'hF, 32'h0000_00A5, 80, "GPIO AXI write integration");
+      WaitForGpioApbSetup(12'h000, 4'hF, 32'h0000_00A5, 20, "GPIO AXI write integration");
+      WaitForGpioApbAccess(12'h000, 4'hF, 32'h0000_00A5, 1'b0, 20, "GPIO AXI write integration");
+      CheckEq32({24'd0, oGpioOut}, 32'h0000_0000, "GPIO AXI write side effect waits for APB completion");
+      WaitForAxiWriteResponse(LP_AXI_RESP_OKAY, 1'b0, 20, "GPIO AXI write integration");
+      CheckEq32({24'd0, oGpioOut}, 32'h0000_00A5, "GPIO AXI write side effect after APB completion");
+
+      WaitForRetirePc(32'd16, 120, "GPIO AXI write final loop");
+      CheckEq32({24'd0, oGpioOut}, 32'h0000_00A5, "GPIO AXI write final output");
+    end
+  endtask
+
+  task automatic RunAxiMmioReadIntegrationTest;
+    begin
+      HoldResetAndClear();
+      iGpioIn = 8'h3C;
+      LoadRomWord(32'd4,  EncLui(5'd1, 20'h40001));
+      LoadRomWord(32'd8,  EncLoad(5'd2, 5'd1, 4, 3'b010));
+      LoadRomWord(32'd12, 32'h0000_006F);
+      ReleaseReset();
+
+      WaitForAxiReadHandshake(32'h4000_1004, 80, "GPIO AXI read integration");
+      WaitForGpioApbReadSetup(12'h004, 20, "GPIO AXI read integration");
+      WaitForGpioApbReadAccess(12'h004, 1'b0, 20, "GPIO AXI read integration");
+      WaitForAxiReadResponse(32'h0000_003C, LP_AXI_RESP_OKAY, 1'b0, 20, "GPIO AXI read integration");
+
+      WaitForRetirePc(32'd12, 120, "GPIO AXI read final loop");
+      CheckEq32(GetRfWord(2), 32'h0000_003C, "GPIO AXI read register writeback");
+      iGpioIn = '0;
     end
   endtask
 
@@ -900,8 +1145,7 @@ module tb_TOP;
     logic [31:0]  PcHoldRef;
     int unsigned  WaitIdx;
     begin
-      force dut.uAPBMASTER.AccessComplete = 1'b0;
-      force dut.uAPB_GPIO.AccessEn        = 1'b0;
+      force dut.uAPB_GPIO.oPready = 1'b0;
 
       HoldResetAndClear();
       LoadRomWord(32'd4,  EncLui(5'd1, 20'h40001));
@@ -925,9 +1169,13 @@ module tb_TOP;
         @(posedge iClk);
 
         CheckEq1(dut.GpioPsel, 1'b1, $sformatf("APB wait hold cycle %0d PSEL", WaitIdx));
+        CheckEq1(dut.GpioPready, 1'b0, $sformatf("APB wait hold cycle %0d PREADY", WaitIdx));
         CheckEq1(dut.ApbPenable, 1'b1, $sformatf("APB wait hold cycle %0d PENABLE", WaitIdx));
+        CheckEq1(dut.uAPB_GPIO.AccessEn, 1'b0, $sformatf("APB wait hold cycle %0d GPIO access enable", WaitIdx));
         CheckEq1(dut.DataBusRsp.RspReady, 1'b0, $sformatf("APB wait hold cycle %0d ready", WaitIdx));
         CheckEq1(dut.uRv32iCore.MemApbStall, 1'b1, $sformatf("APB wait hold cycle %0d stall", WaitIdx));
+        CheckEq1(dut.AxiBvalid, 1'b0, $sformatf("APB wait hold cycle %0d no AXI write response", WaitIdx));
+        CheckEq1(dut.AxiRvalid, 1'b0, $sformatf("APB wait hold cycle %0d no AXI read response", WaitIdx));
         CheckEq32({24'd0, oGpioOut}, 32'h0000_0000, $sformatf("APB wait hold cycle %0d GPIO side effect", WaitIdx));
 
         if (dut.uRv32iCore.Pc !== PcHoldRef) begin
@@ -950,9 +1198,12 @@ module tb_TOP;
         end
       end
 
-      release dut.uAPBMASTER.AccessComplete;
-      release dut.uAPB_GPIO.AccessEn;
-      WaitCycles(2);
+      @(negedge iClk);
+      force dut.uAPB_GPIO.oPready = 1'b1;
+      WaitForAxiWriteResponse(LP_AXI_RESP_OKAY, 1'b0, 20, "APB wait-state release");
+      CheckEq32({24'd0, oGpioOut}, 32'h0000_00A5, "APB wait-state release GPIO write");
+      release dut.uAPB_GPIO.oPready;
+      WaitForRetirePc(32'd16, 120, "APB wait-state final loop");
     end
   endtask
 
@@ -963,7 +1214,7 @@ module tb_TOP;
       ReleaseReset();
 
       force dut.ApbSel   = 1'b1;
-      force dut.ApbWrite = 1'b0;
+      force dut.ApbWr = 1'b0;
       force dut.BusAddr  = 32'h4000_6000;
       force dut.BusByteEn = 4'hF;
       force dut.BusWdata = 32'd0;
@@ -995,11 +1246,17 @@ module tb_TOP;
       CheckEq1(dut.SpiPsel, 1'b0, "APB local error access no SPI select");
       CheckEq1(dut.FndPsel, 1'b0, "APB local error access no FND select");
       CheckEq1(dut.ApbPenable, 1'b1, "APB local error access PENABLE high");
-      CheckEq1(dut.uAPBMASTER.oRspReady, 1'b1, "APB local error completion ready");
-      CheckEq1(dut.uAPBMASTER.oPslverr, 1'b1, "APB local error completion error");
+      for (WaitIdx = 0; WaitIdx < 10; WaitIdx = WaitIdx + 1) begin
+        @(posedge iClk);
+        if (dut.ApbRspReady) begin
+          break;
+        end
+      end
+      CheckEq1(dut.ApbRspReady, 1'b1, "APB local error native completion ready");
+      CheckEq1(dut.ApbPslverr, 1'b1, "APB local error native completion error");
 
       release dut.ApbSel;
-      release dut.ApbWrite;
+      release dut.ApbWr;
       release dut.BusAddr;
       release dut.BusByteEn;
       release dut.BusWdata;
@@ -1105,7 +1362,7 @@ module tb_TOP;
       HoldResetAndClear();
       LoadRomWord(32'd4,  EncAddi(5'd4, 5'd0, LP_TRAP_VECTOR));
       LoadRomWord(32'd8,  EncCsrReg(5'd0, 5'd4, LP_CSR_MTVEC, 3'b001));
-      LoadRomWord(32'd12, EncLui(5'd1, 20'h40006));
+      LoadRomWord(32'd12, EncLui(5'd1, 20'h50000));
       LoadRomWord(32'd16, EncLoad(5'd2, 5'd1, 0, 3'b010));
       LoadRomWord(32'd20, EncAddi(5'd3, 5'd0, 1));
       LoadRomWord(LP_TRAP_VECTOR, 32'h0000_006F);
@@ -1127,6 +1384,27 @@ module tb_TOP;
       WaitForTrapState(LP_TRAP_VECTOR, 32'd16, LP_MCAUSE_LOAD_ACCESS, 120, "UART RX empty slave error");
       CheckEq32(GetRfWord(2), 32'h0000_0000, "empty RX read returns no committed data");
       CheckEq32(GetRfWord(3), 32'h0000_0000, "empty RX read kills younger instruction");
+    end
+  endtask
+
+  task automatic RunAxiMmioLocalErrorTrapTest;
+    begin
+      HoldResetAndClear();
+      LoadRomWord(32'd4,  EncAddi(5'd4, 5'd0, LP_TRAP_VECTOR));
+      LoadRomWord(32'd8,  EncCsrReg(5'd0, 5'd4, LP_CSR_MTVEC, 3'b001));
+      LoadRomWord(32'd12, EncLui(5'd1, 20'h40008));
+      LoadRomWord(32'd16, EncLoad(5'd2, 5'd1, 0, 3'b010));
+      LoadRomWord(32'd20, EncAddi(5'd3, 5'd0, 1));
+      LoadRomWord(LP_TRAP_VECTOR, 32'h0000_006F);
+      ReleaseReset();
+
+      WaitForAxiReadHandshake(32'h4000_8000, 80, "AXI local error trap");
+      WaitForAxiLocalErrorApbSetup(20, "AXI local error trap");
+      WaitForAxiLocalErrorApbAccess(20, "AXI local error trap");
+      WaitForAxiReadResponse(32'h0000_0000, LP_AXI_RESP_SLVERR, 1'b1, 20, "AXI local error trap");
+      WaitForTrapState(LP_TRAP_VECTOR, 32'd16, LP_MCAUSE_LOAD_ACCESS, 120, "AXI local error trap");
+      CheckEq32(GetRfWord(2), 32'h0000_0000, "AXI local error suppresses writeback");
+      CheckEq32(GetRfWord(3), 32'h0000_0000, "AXI local error kills younger instruction");
     end
   endtask
 
@@ -1367,7 +1645,7 @@ module tb_TOP;
       CheckEq32(GetRfWord(13), 32'h0000_0002, "INTC vector UART claim id");
       CheckEq32(GetRfWord(15), 32'h0000_00C3, "INTC vector UART RXDATA pop");
       CheckEq32(GetRfWord(31), 32'h0000_0000, "INTC vector bypassed common trap for UART");
-      CheckEq1(dut.uInterruptController.uIntcRegIf.oVectorEnable, 1'b1, "INTC vector enable register");
+      CheckEq1(dut.uInterruptController.uIntcRegIf.oVectorEn, 1'b1, "INTC vector enable register");
       CheckEq32(dut.uInterruptController.uIntcRegIf.oVectorEntryFlat[31:0], 32'd0, "INTC vector entry0 remains reserved");
       CheckEq32(dut.uInterruptController.uIntcRegIf.oVectorEntryFlat[63:32], LP_GPIO_HANDLER, "INTC vector entry1 GPIO handler");
       CheckEq32(dut.uInterruptController.uIntcRegIf.oVectorEntryFlat[95:64], LP_UART_HANDLER, "INTC vector entry2 UART handler");
@@ -1506,19 +1784,80 @@ module tb_TOP;
       CheckEq32(GetRfWord(10), 32'h0000_0001, "complete gate first GPIO service");
       CheckEq32(GetRfWord(12), 32'h0000_0001, "complete gate first claim id");
       CheckEq1(dut.GpioIrq, 1'b1, "complete gate raw GPIO source still asserted");
+      CheckEq1(dut.uInterruptController.uIntcPendingCtrl.oPendingVec[0],
+               1'b0, "complete gate pending clear before COMPLETE");
+      CheckEq1(dut.uInterruptController.uIntcPendingCtrl.oInServiceVec[0],
+               1'b1, "complete gate in-service set before COMPLETE");
+      CheckEq1(dut.uInterruptController.genIntcGateway[0].uIntcGateway.oBlocked,
+               1'b1, "complete gate gateway blocked before COMPLETE");
       CheckEq1(dut.ExtIrqPending, 1'b0, "complete gate suppresses re-notify before COMPLETE");
 
       for (WaitIdx = 0; WaitIdx < 400; WaitIdx = WaitIdx + 1) begin
+        @(negedge iClk);
+        if (dut.IntcPsel && dut.ApbPenable && dut.ApbPwrite
+         && (dut.ApbPaddr == LP_INTC_REG_COMPLETE[11:0])) begin
+          CheckEq32(dut.ApbPwdata, 32'h0000_0001, "complete gate COMPLETE source id");
+          CheckEq1(dut.uInterruptController.uIntcPendingCtrl.oCompleteAcceptVec[0],
+                   1'b1, "complete gate COMPLETE accept before clock edge");
+          CheckEq1(dut.uInterruptController.genIntcGateway[0].uIntcGateway.oPendingSetPulse,
+                   1'b0, "complete gate does not reissue pending pulse before delayed Moore state");
+
+          @(posedge iClk);
+          #1;
+          CheckEq1(dut.uInterruptController.uIntcPendingCtrl.oPendingVec[0],
+                   1'b0, "complete gate pending waits for delayed Moore pending pulse");
+          CheckEq1(dut.uInterruptController.uIntcPendingCtrl.oInServiceVec[0],
+                   1'b0, "complete gate in-service clear on COMPLETE edge");
+          CheckEq1(dut.uInterruptController.genIntcGateway[0].uIntcGateway.oPendingSetPulse,
+                   1'b1, "complete gate emits one-clock delayed pending pulse");
+          CheckEq1(dut.uInterruptController.genIntcGateway[0].uIntcGateway.oBlocked,
+                   1'b0, "complete gate gateway leaves blocked state while emitting pending pulse");
+          CheckEq1(dut.ExtIrqPending, 1'b0, "complete gate controller IRQ waits for delayed pending latch");
+
+          @(posedge iClk);
+          #1;
+          CheckEq1(dut.uInterruptController.uIntcPendingCtrl.oPendingVec[0],
+                   1'b1, "complete gate pending re-set after delayed pending pulse");
+          CheckEq1(dut.uInterruptController.uIntcPendingCtrl.oInServiceVec[0],
+                   1'b0, "complete gate in-service remains clear after delayed pending pulse");
+          CheckEq1(dut.uInterruptController.genIntcGateway[0].uIntcGateway.oBlocked,
+                   1'b1, "complete gate gateway returns blocked after delayed pending pulse");
+          CheckEq1(dut.ExtIrqPending, 1'b1, "complete gate re-asserts controller IRQ after delayed pending latch");
+          break;
+        end
+
+        CheckEq1(dut.ExtIrqPending, 1'b0, "complete gate suppresses re-notify until COMPLETE");
+      end
+
+      if (WaitIdx == 400) begin
+        $fatal(1, "[FAIL] complete gate COMPLETE write not observed");
+      end
+
+      CheckEq32(GetRfWord(10), 32'h0000_0001, "complete gate service count before second claim");
+      CheckEq32(GetRfWord(12), 32'h0000_0001, "complete gate retained claim id before second claim");
+      CheckEq1(dut.GpioIrq, 1'b1, "complete gate source remains asserted without W1C");
+
+      for (WaitIdx = 0; WaitIdx < 250; WaitIdx = WaitIdx + 1) begin
         @(posedge iClk);
-        if (dut.ExtIrqPending == 1'b1) begin
+        if (GetRfWord(10) == 32'h0000_0002) begin
           break;
         end
       end
 
-      CheckEq32(GetRfWord(10), 32'h0000_0001, "complete gate service count before re-notify");
-      CheckEq32(GetRfWord(12), 32'h0000_0001, "complete gate retained claim id");
-      CheckEq1(dut.GpioIrq, 1'b1, "complete gate source remains asserted without W1C");
-      CheckEq1(dut.ExtIrqPending, 1'b1, "complete gate re-asserts controller IRQ after COMPLETE");
+      if (WaitIdx == 250) begin
+        $fatal(1, "[FAIL] complete gate second GPIO claim not observed");
+      end
+
+      CheckEq32(GetRfWord(10), 32'h0000_0002, "complete gate second GPIO service");
+      CheckEq32(GetRfWord(12), 32'h0000_0001, "complete gate second claim id");
+      CheckEq1(dut.GpioIrq, 1'b1, "complete gate source remains asserted after second claim");
+      CheckEq1(dut.uInterruptController.uIntcPendingCtrl.oPendingVec[0],
+               1'b0, "complete gate pending clear after second claim");
+      CheckEq1(dut.uInterruptController.uIntcPendingCtrl.oInServiceVec[0],
+               1'b1, "complete gate in-service set after second claim");
+      CheckEq1(dut.uInterruptController.genIntcGateway[0].uIntcGateway.oBlocked,
+               1'b1, "complete gate gateway blocked after second claim");
+      CheckEq1(dut.ExtIrqPending, 1'b0, "complete gate suppresses duplicate pending after second claim");
     end
   endtask
 

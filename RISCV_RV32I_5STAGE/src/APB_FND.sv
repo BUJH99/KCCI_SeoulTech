@@ -14,7 +14,7 @@ module APB_FND #(
   parameter int unsigned P_CLK_HZ = 100_000_000
 ) (
   input  logic        iClk,
-  input  logic        iRstn,
+  input  logic        iRst,
   input  logic        iPsel,
   input  logic        iPenable,
   input  logic        iPwrite,
@@ -29,7 +29,6 @@ module APB_FND #(
   output logic        oDp,
   output logic [3:0]  oDigitSel
 );
-  logic        Rst;
   logic [15:0] DigitsBcd;
   logic [3:0] BlinkMask;
   logic [3:0] DpMask;
@@ -41,13 +40,12 @@ module APB_FND #(
   logic [3:0] DigitSelInt;
   logic       AccessEn;
 
-  assign Rst      = !iRstn;
   assign oPready  = 1'b1;
   assign AccessEn = iPsel && iPenable && oPready;
 
   FndRegs uFndRegs (
     .iClk(iClk),
-    .iRstn(iRstn),
+    .iRst(iRst),
     .iAccessEn(AccessEn),
     .iPwrite(iPwrite),
     .iPaddr(iPaddr),
@@ -65,14 +63,14 @@ module APB_FND #(
     .P_CLK_HZ(P_CLK_HZ)
   ) uFndTickGen (
     .iClk(iClk),
-    .iRstn(iRstn),
+    .iRst(iRst),
     .oTick1kHz(Tick1kHz),
     .oTick2Hz(Tick2Hz)
   );
 
   FndController uFndController (
     .iClk      (iClk),
-    .iRst      (Rst),
+    .iRst      (iRst),
     .iTick1kHz (Tick1kHz),
     .iTick2Hz  (Tick2Hz),
     .iDigitsBcd(DigitsBcd),

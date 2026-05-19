@@ -16,7 +16,7 @@ module IntcPriorityClaim #(
   parameter int unsigned P_PRIORITY_WIDTH = rv32i_pkg::LP_INTC_PRIORITY_WIDTH
 ) (
   input  logic [P_NUM_SOURCES-1:0] iPendingVec,
-  input  logic [P_NUM_SOURCES-1:0] iEnableVec,
+  input  logic [P_NUM_SOURCES-1:0] iEnVec,
   input  logic [((P_NUM_SOURCES + 1) * P_PRIORITY_WIDTH)-1:0] iPriorityEntryFlat,
   input  logic [P_PRIORITY_WIDTH-1:0] iThreshold,
   input  logic [31:0]              iCompleteId,
@@ -25,41 +25,41 @@ module IntcPriorityClaim #(
   output logic [P_NUM_SOURCES-1:0] oClaimSelVec,
   output logic [P_NUM_SOURCES-1:0] oCompleteSelVec,
   output logic [31:0]              oClaimId,
-  output logic [31:0]              oSelectedSourceId,
-  output logic                     oSelectedSourceValid,
+  output logic [31:0]              oSelSrcId,
+  output logic                     oSelSrcValid,
   output logic                     oMachineExtIrq
 );
 
-  logic [P_PRIORITY_WIDTH-1:0] SourcePriority;
+  logic [P_PRIORITY_WIDTH-1:0] SrcPriority;
   logic [P_PRIORITY_WIDTH-1:0] BestPriority;
   logic                       Eligible;
   int unsigned                ClaimSourceId;
   int unsigned                CompleteSourceId;
 
-  assign oMachineExtIrq       = oSelectedSourceValid;
-  assign oSelectedSourceId    = oClaimId;
+  assign oMachineExtIrq       = oSelSrcValid;
+  assign oSelSrcId    = oClaimId;
 
   always_comb begin
     oClaimPendingVec     = '0;
     oClaimSelVec         = '0;
     oClaimId             = 32'd0;
-    oSelectedSourceValid = 1'b0;
+    oSelSrcValid = 1'b0;
     BestPriority         = '0;
 
     for (ClaimSourceId = 1; ClaimSourceId <= P_NUM_SOURCES; ClaimSourceId = ClaimSourceId + 1) begin
-      SourcePriority = iPriorityEntryFlat[(ClaimSourceId * P_PRIORITY_WIDTH) +: P_PRIORITY_WIDTH];
+      SrcPriority = iPriorityEntryFlat[(ClaimSourceId * P_PRIORITY_WIDTH) +: P_PRIORITY_WIDTH];
       Eligible       = iPendingVec[ClaimSourceId-1]
-                    && iEnableVec[ClaimSourceId-1]
-                    && (SourcePriority > iThreshold);
+                    && iEnVec[ClaimSourceId-1]
+                    && (SrcPriority > iThreshold);
 
       oClaimPendingVec[ClaimSourceId-1] = Eligible;
 
-      if (Eligible && (!oSelectedSourceValid || (SourcePriority > BestPriority))) begin
+      if (Eligible && (!oSelSrcValid || (SrcPriority > BestPriority))) begin
         oClaimSelVec         = '0;
         oClaimSelVec[ClaimSourceId-1] = 1'b1;
         oClaimId             = 32'(ClaimSourceId);
-        oSelectedSourceValid = 1'b1;
-        BestPriority         = SourcePriority;
+        oSelSrcValid = 1'b1;
+        BestPriority         = SrcPriority;
       end
     end
   end

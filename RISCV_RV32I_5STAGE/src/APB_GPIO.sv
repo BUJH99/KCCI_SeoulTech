@@ -14,7 +14,7 @@ module APB_GPIO #(
   parameter int unsigned P_GPIO_WIDTH = 8
 ) (
   input  logic                    iClk,
-  input  logic                    iRstn,
+  input  logic                    iRst,
   input  logic                    iPsel,
   input  logic                    iPenable,
   input  logic                    iPwrite,
@@ -47,7 +47,7 @@ module APB_GPIO #(
     .P_GPIO_WIDTH(P_GPIO_WIDTH)
   ) uGpioRegs (
     .iClk(iClk),
-    .iRstn(iRstn),
+    .iRst(iRst),
     .iAccessEn(AccessEn),
     .iPwrite(iPwrite),
     .iPaddr(iPaddr),
@@ -68,7 +68,7 @@ module APB_GPIO #(
     .P_GPIO_WIDTH(P_GPIO_WIDTH)
   ) uGpioIrqCtrl (
     .iClk(iClk),
-    .iRstn(iRstn),
+    .iRst(iRst),
     .iGpioIn(iGpioIn),
     .iIrqRiseEn(IrqRiseEn),
     .iIrqFallEn(IrqFallEn),

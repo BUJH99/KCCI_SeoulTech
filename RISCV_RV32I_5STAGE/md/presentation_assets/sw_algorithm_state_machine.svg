@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1380" height="760" viewBox="0 0 1380 760" role="img" aria-labelledby="title desc">
+  <title id="title">Firmware Algorithm State Machine</title>
+  <desc id="desc">Algorithm state machine for firmware initialization, main loop, timer tick processing, and trap handling.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f8fafc; }
+      .title { font: 700 24px Arial, sans-serif; fill: #111827; }
+      .section { font: 700 17px Arial, sans-serif; fill: #111827; }
+      .label { font: 700 14px Arial, sans-serif; fill: #111827; }
+      .small { font: 12px Arial, sans-serif; fill: #374151; }
+      .tiny { font: 11px Arial, sans-serif; fill: #4b5563; }
+      .state { fill: #e0f2fe; stroke: #0369a1; stroke-width: 2; rx: 8; }
+      .action { fill: #dcfce7; stroke: #15803d; stroke-width: 2; rx: 8; }
+      .decision { fill: #fef3c7; stroke: #b45309; stroke-width: 2; }
+      .trap { fill: #fee2e2; stroke: #b91c1c; stroke-width: 2; rx: 8; }
+      .note { fill: #ffffff; stroke: #94a3b8; stroke-width: 1.5; rx: 8; }
+      .line { stroke: #334155; stroke-width: 2.1; fill: none; marker-end: url(#arrow); }
+      .red { stroke: #dc2626; stroke-width: 2.1; fill: none; marker-end: url(#arrow-red); }
+      .blue { stroke: #2563eb; stroke-width: 2.1; fill: none; marker-end: url(#arrow-blue); }
+      .dash { stroke: #64748b; stroke-width: 1.7; stroke-dasharray: 6 5; fill: none; marker-end: url(#arrow-gray); }
+    </style>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#334155"/>
+    </marker>
+    <marker id="arrow-red" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#dc2626"/>
+    </marker>
+    <marker id="arrow-blue" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#2563eb"/>
+    </marker>
+    <marker id="arrow-gray" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#64748b"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="1380" height="760"/>
+  <text class="title" x="40" y="44">SW Algorithm State Machine: Firmware Top Flow</text>
+  <text class="small" x="40" y="68">ASM here means Algorithm State Machine: state box + decision box + action output flow.</text>
+
+  <text class="section" x="70" y="112">Main Firmware ASM</text>
+
+  <rect class="state" x="70" y="140" width="180" height="66"/>
+  <text class="label" x="118" y="167">RESET_ENTRY</text>
+  <text class="small" x="101" y="188">_start after reset</text>
+
+  <rect class="action" x="310" y="140" width="210" height="66"/>
+  <text class="label" x="365" y="167">BOOT_SETUP</text>
+  <text class="small" x="336" y="188">stack set, .bss clear</text>
+
+  <rect class="action" x="580" y="130" width="230" height="88"/>
+  <text class="label" x="653" y="158">INIT</text>
+  <text class="small" x="610" y="179">demo_reset</text>
+  <text class="small" x="610" y="196">timer_init_100hz</text>
+  <text class="small" x="610" y="213">trap/peripheral/intc init</text>
+
+  <rect class="state" x="870" y="140" width="190" height="66"/>
+  <text class="label" x="928" y="167">MAIN_LOOP</text>
+  <text class="small" x="902" y="188">forever service loop</text>
+
+  <polygon class="decision" points="1130,122 1245,173 1130,224 1015,173"/>
+  <text class="label" x="1083" y="168">INTC claim?</text>
+  <text class="tiny" x="1088" y="188">source_id != 0</text>
+
+  <rect class="action" x="1040" y="260" width="180" height="86"/>
+  <text class="label" x="1083" y="288">SERVICE_IRQ</text>
+  <text class="small" x="1070" y="310">GPIO / UART</text>
+  <text class="small" x="1070" y="328">I2C / SPI</text>
+
+  <polygon class="decision" points="965,388 1080,439 965,490 850,439"/>
+  <text class="label" x="908" y="434">Timer tick?</text>
+  <text class="tiny" x="900" y="454">g_timer_tick_pending</text>
+
+  <rect class="action" x="620" y="396" width="180" height="86"/>
+  <text class="label" x="660" y="424">TICK_TASKS</text>
+  <text class="small" x="648" y="446">demo_sort_tick</text>
+  <text class="small" x="648" y="464">gpio_debounce</text>
+
+  <polygon class="decision" points="430,388 545,439 430,490 315,439"/>
+  <text class="label" x="365" y="434">Health due?</text>
+  <text class="tiny" x="373" y="454">100 ticks elapsed</text>
+
+  <rect class="action" x="90" y="396" width="170" height="86"/>
+  <text class="label" x="127" y="424">SLAVE_HEALTH</text>
+  <text class="small" x="118" y="446">probe if offline</text>
+  <text class="small" x="118" y="464">reapply mode</text>
+
+  <rect class="note" x="70" y="545" width="520" height="86"/>
+  <text class="label" x="92" y="573">Main loop outputs</text>
+  <text class="small" x="92" y="596">Timer tick drives sort pacing, GPIO debounce, SPI/I2C timeout, SLAVE health check.</text>
+  <text class="small" x="92" y="616">External IRQ service handles user input and peripheral error/event status.</text>
+
+  <path class="line" d="M250 173 H310"/>
+  <path class="line" d="M520 173 H580"/>
+  <path class="line" d="M810 173 H870"/>
+  <path class="line" d="M1060 173 H1015"/>
+  <path class="line" d="M1130 224 V260"/>
+  <text class="tiny" x="1140" y="245">yes</text>
+  <path class="line" d="M1220 304 C1295 304 1295 173 1245 173"/>
+  <text class="tiny" x="1250" y="196">loop</text>
+  <path class="line" d="M1015 439 H1060 C1110 439 1125 360 1170 346"/>
+  <text class="tiny" x="1006" y="419">no tick path loops</text>
+  <path class="line" d="M965 388 V224"/>
+  <text class="tiny" x="975" y="360">no</text>
+  <path class="line" d="M850 439 H800"/>
+  <text class="tiny" x="815" y="425">yes</text>
+  <path class="line" d="M620 439 H545"/>
+  <path class="line" d="M315 439 H260"/>
+  <text class="tiny" x="274" y="425">yes</text>
+  <path class="line" d="M430 490 C430 530 965 530 965 490"/>
+  <text class="tiny" x="454" y="515">no or done</text>
+  <path class="line" d="M90 439 C40 439 40 173 70 173"/>
+
+  <text class="section" x="720" y="560">Trap ASM</text>
+
+  <rect class="trap" x="720" y="590" width="155" height="58"/>
+  <text class="label" x="757" y="614">TRAP_ENTER</text>
+  <text class="tiny" x="750" y="633">trap_entry saves regs</text>
+
+  <polygon class="decision" points="965,574 1070,619 965,664 860,619"/>
+  <text class="label" x="909" y="615">mcause?</text>
+  <text class="tiny" x="918" y="635">timer / external / other</text>
+
+  <rect class="trap" x="1150" y="520" width="170" height="58"/>
+  <text class="label" x="1182" y="544">TIMER_ISR</text>
+  <text class="tiny" x="1173" y="563">clear status, tick++</text>
+
+  <rect class="trap" x="1150" y="605" width="170" height="58"/>
+  <text class="label" x="1177" y="629">EXTERNAL_ISR</text>
+  <text class="tiny" x="1173" y="648">call service_claim</text>
+
+  <rect class="trap" x="1150" y="690" width="170" height="50"/>
+  <text class="label" x="1189" y="714">TRAP_ERR</text>
+  <text class="tiny" x="1173" y="731">show E000|cause</text>
+
+  <path class="red" d="M875 619 H860"/>
+  <path class="red" d="M1070 619 H1150"/>
+  <text class="tiny" x="1086" y="604">external</text>
+  <path class="red" d="M1025 590 C1070 548 1105 548 1150 548"/>
+  <text class="tiny" x="1078" y="532">timer</text>
+  <path class="red" d="M1025 648 C1075 714 1100 714 1150 714"/>
+  <text class="tiny" x="1072" y="698">other</text>
+  <path class="dash" d="M1235 578 C1245 590 1245 604 1235 605"/>
+  <path class="dash" d="M1235 663 C1245 675 1245 688 1235 690"/>
+  <path class="red" d="M720 619 C640 619 640 173 870 173"/>
+  <text class="tiny" x="625" y="604">mret returns to interrupted flow</text>
+</svg>

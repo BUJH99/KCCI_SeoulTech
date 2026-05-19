@@ -11,7 +11,7 @@ Summary:
 `timescale 1ns / 1ps
 
 module LoadFormatter (
-  input  logic                  iMemRead,
+  input  logic                  iMemRd,
   input  rv32i_pkg::MemSizeE  iMemSize,
   input  logic                  iLoadUnsigned,
   input  logic [31:0]           iAddr,
@@ -52,7 +52,7 @@ module LoadFormatter (
   always_comb begin
     oLoadData   = iRdData;
 
-    if (iMemRead) begin
+    if (iMemRd) begin
       unique case (iMemSize)
         MEM_BYTE: begin
           if (iLoadUnsigned) begin

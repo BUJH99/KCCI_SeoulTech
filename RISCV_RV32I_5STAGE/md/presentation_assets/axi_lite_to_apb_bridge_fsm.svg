@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="650" viewBox="0 0 1280 650" role="img" aria-labelledby="title desc">
+  <title id="title">AxiLiteToApbBridge FSM</title>
+  <desc id="desc">AXI4-Lite slave accepts a single write or read and converts it into APB setup and access phases.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155"/>
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .state { fill: #ffffff; stroke: #1f2937; stroke-width: 2; rx: 10; }
+      .write { fill: #fff7ed; stroke: #c2410c; }
+      .read { fill: #ecfeff; stroke: #0e7490; }
+      .note { fill: #f1f5f9; stroke: #64748b; stroke-width: 1.5; rx: 8; }
+      .title { font: 700 24px Arial, sans-serif; fill: #111827; }
+      .text { font: 600 15px Arial, sans-serif; fill: #111827; }
+      .small { font: 13px Arial, sans-serif; fill: #374151; }
+      .edge { fill: none; stroke: #334155; stroke-width: 2; marker-end: url(#arrow); }
+      .edgeWrite { fill: none; stroke: #c2410c; stroke-width: 2; marker-end: url(#arrow); }
+      .edgeRead { fill: none; stroke: #0e7490; stroke-width: 2; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect class="bg" x="0" y="0" width="1280" height="650"/>
+  <text class="title" x="40" y="48">AXI4-Lite Slave to APB Master Bridge FSM</text>
+  <text class="small" x="40" y="76">Write has priority when AW/W is present in IDLE. Each accepted AXI transfer becomes one APB transfer.</text>
+
+  <rect class="state" x="55" y="275" width="145" height="80"/>
+  <text class="text" x="127" y="309" text-anchor="middle">IDLE</text>
+  <text class="small" x="127" y="331" text-anchor="middle">accept AXI</text>
+
+  <rect class="state write" x="290" y="112" width="175" height="88"/>
+  <text class="text" x="377" y="147" text-anchor="middle">AXI_WRITE_ACCEPT</text>
+  <text class="small" x="377" y="170" text-anchor="middle">wait missing AW/W</text>
+
+  <rect class="state write" x="540" y="112" width="165" height="88"/>
+  <text class="text" x="622" y="147" text-anchor="middle">APB_WRITE_SETUP</text>
+  <text class="small" x="622" y="170" text-anchor="middle">PSEL, PENABLE=0</text>
+
+  <rect class="state write" x="780" y="112" width="170" height="88"/>
+  <text class="text" x="865" y="147" text-anchor="middle">APB_WRITE_ACCESS</text>
+  <text class="small" x="865" y="170" text-anchor="middle">PENABLE=1</text>
+
+  <rect class="state write" x="1025" y="112" width="160" height="88"/>
+  <text class="text" x="1105" y="147" text-anchor="middle">AXI_WRITE_RESP</text>
+  <text class="small" x="1105" y="170" text-anchor="middle">BVALID/BRESP</text>
+
+  <rect class="state read" x="420" y="440" width="155" height="88"/>
+  <text class="text" x="497" y="475" text-anchor="middle">APB_READ_SETUP</text>
+  <text class="small" x="497" y="498" text-anchor="middle">PSEL, PENABLE=0</text>
+
+  <rect class="state read" x="670" y="440" width="160" height="88"/>
+  <text class="text" x="750" y="475" text-anchor="middle">APB_READ_ACCESS</text>
+  <text class="small" x="750" y="498" text-anchor="middle">PENABLE=1</text>
+
+  <rect class="state read" x="920" y="440" width="150" height="88"/>
+  <text class="text" x="995" y="475" text-anchor="middle">AXI_READ_RESP</text>
+  <text class="small" x="995" y="498" text-anchor="middle">RVALID/RDATA</text>
+
+  <path class="edgeWrite" d="M200 295 C235 230 258 176 290 156"/>
+  <text class="small" x="252" y="224" text-anchor="middle">writeSelected</text>
+  <path class="edgeWrite" d="M465 156 L540 156"/>
+  <text class="small" x="502" y="143" text-anchor="middle">AW/W done</text>
+  <path class="edgeWrite" d="M705 156 L780 156"/>
+  <text class="small" x="742" y="143" text-anchor="middle">next</text>
+  <path class="edgeWrite" d="M950 156 L1025 156"/>
+  <text class="small" x="987" y="143" text-anchor="middle">AccessComplete</text>
+  <path class="edgeWrite" d="M1105 112 C1105 60 128 60 128 275"/>
+  <text class="small" x="612" y="70" text-anchor="middle">BREADY - IDLE</text>
+
+  <path class="edgeRead" d="M200 340 C268 420 336 484 420 484"/>
+  <text class="small" x="303" y="426" text-anchor="middle">AR handshake, no write</text>
+  <path class="edgeRead" d="M575 484 L670 484"/>
+  <text class="small" x="622" y="471" text-anchor="middle">next</text>
+  <path class="edgeRead" d="M830 484 L920 484"/>
+  <text class="small" x="875" y="471" text-anchor="middle">AccessComplete</text>
+  <path class="edgeRead" d="M995 528 C995 600 128 595 128 355"/>
+  <text class="small" x="564" y="610" text-anchor="middle">RREADY - IDLE</text>
+
+  <rect class="note" x="45" y="100" width="180" height="120"/>
+  <text class="text" x="135" y="132" text-anchor="middle">APB decode</text>
+  <text class="small" x="135" y="162" text-anchor="middle">APBMux selects UART</text>
+  <text class="small" x="135" y="184" text-anchor="middle">GPIO, I2C, INTC</text>
+  <text class="small" x="135" y="206" text-anchor="middle">SPI, FND by addr[31:12]</text>
+
+  <rect class="note" x="1085" y="430" width="155" height="105"/>
+  <text class="text" x="1162" y="462" text-anchor="middle">Response</text>
+  <text class="small" x="1162" y="492" text-anchor="middle">PSLVERR - SLVERR</text>
+  <text class="small" x="1162" y="514" text-anchor="middle">else OKAY</text>
+</svg>

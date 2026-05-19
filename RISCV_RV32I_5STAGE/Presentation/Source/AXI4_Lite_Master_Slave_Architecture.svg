@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="900" height="740" viewBox="0 0 900 740" xmlns="http://www.w3.org/2000/svg">
+        
+        <!-- 화살표 마커 정의 -->
+        <defs>
+            <marker id="arrow-head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+                <path d="M 0 0 L 10 5 L 0 10 Z" fill="#111" />
+            </marker>
+            <marker id="arrow-head-clock" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                <path d="M 0 0 L 10 5 L 0 10 Z" fill="#555" />
+            </marker>
+        </defs>
+
+  <style>
+    .box-main {
+      fill: #ffffff;
+      stroke: #1a1a1a;
+      stroke-width: 2.5px;
+    }
+    .box-bg {
+      fill: #fafbfc;
+    }
+    .flow-box-write {
+      fill: #fffcfc;
+      stroke: #8b0000;
+      stroke-width: 1.5px;
+      stroke-dasharray: 8, 4;
+    }
+    .flow-box-read {
+      fill: #fcfcff;
+      stroke: #00008b;
+      stroke-width: 1.5px;
+      stroke-dasharray: 8, 4;
+    }
+    .text-title {
+      font-family: "Times New Roman", Times, serif;
+      font-size: 22px;
+      font-weight: bold;
+      fill: #000000;
+    }
+    .text-subtitle {
+      font-family: "Times New Roman", Times, serif;
+      font-size: 16px;
+      fill: #333333;
+    }
+    .text-flow-title {
+      font-family: "Times New Roman", Times, serif;
+      font-size: 15px;
+      font-weight: bold;
+    }
+    .text-channel {
+      font-family: "Times New Roman", Times, serif;
+      font-size: 14px;
+      font-style: italic;
+      fill: #444444;
+    }
+    .text-signal {
+      font-family: "Consolas", "Courier New", monospace;
+      font-size: 13px;
+      fill: #111111;
+    }
+    .text-caption {
+      font-family: "Times New Roman", Times, serif;
+      font-size: 18px;
+      font-weight: bold;
+      fill: #000000;
+    }
+    .line-signal {
+      stroke: #111111;
+      stroke-width: 1.5px;
+      fill: none;
+    }
+    .line-clock {
+      stroke: #555555;
+      stroke-width: 1.5px;
+      stroke-dasharray: 4, 2;
+      fill: none;
+    }
+  </style>
+
+
+        <!-- 배경 (흰색 보장) -->
+        <rect width="100%" height="100%" fill="#ffffff" />
+
+        <!-- ==================== 클럭 및 리셋 (Global Signals) ==================== -->
+        <text x="450" y="30" text-anchor="middle" class="text-signal" font-weight="bold" fill="#555">ACLK, ARESETn</text>
+        <line x1="450" y1="35" x2="450" y2="55" class="line-clock" />
+        <line x1="120" y1="55" x2="780" y2="55" class="line-clock" />
+        <line x1="120" y1="55" x2="120" y2="80" class="line-clock" marker-end="url(#arrow-head-clock)" />
+        <line x1="780" y1="55" x2="780" y2="80" class="line-clock" marker-end="url(#arrow-head-clock)" />
+
+        <!-- ==================== 그룹 박스: Write Flow ==================== -->
+        <rect x="210" y="90" width="480" height="300" rx="6" class="flow-box-write" fill="#fffcfc" stroke="#8b0000" stroke-width="1.5" stroke-dasharray="8, 4" />
+        <text x="225" y="115" class="text-flow-title" fill="#8b0000">Write Transaction Flow</text>
+
+        <!-- ==================== 그룹 박스: Read Flow ==================== -->
+        <rect x="210" y="410" width="480" height="210" rx="6" class="flow-box-read" fill="#fcfcff" stroke="#00008b" stroke-width="1.5" stroke-dasharray="8, 4" />
+        <text x="225" y="435" class="text-flow-title" fill="#00008b">Read Transaction Flow</text>
+
+        <!-- ==================== Master Block ==================== -->
+        <rect x="40" y="80" width="160" height="560" rx="4" class="box-main box-bg" fill="#fafbfc" stroke="#1a1a1a" stroke-width="2.5" />
+        <text x="120" y="340" text-anchor="middle" class="text-title">AXI4-Lite</text>
+        <text x="120" y="365" text-anchor="middle" class="text-title">Master</text>
+
+        <!-- ==================== Slave Block ==================== -->
+        <rect x="700" y="80" width="160" height="560" rx="4" class="box-main box-bg" fill="#fafbfc" stroke="#1a1a1a" stroke-width="2.5" />
+        <text x="780" y="340" text-anchor="middle" class="text-title">AXI4-Lite</text>
+        <text x="780" y="365" text-anchor="middle" class="text-title">Slave</text>
+
+
+        <!-- ==================== WRITE CHANNELS (쓰기 채널) ==================== -->
+        
+        <!-- AW Channel (Write Address) -->
+        <text x="450" y="140" text-anchor="middle" class="text-channel">Write Address Channel (AW)</text>
+        <!-- AW Info (M -> S) -->
+        <text x="450" y="155" text-anchor="middle" class="text-signal">AWADDR, AWPROT, AWVALID</text>
+        <line x1="200" y1="160" x2="700" y2="160" class="line-signal" marker-end="url(#arrow-head)" />
+        <!-- AW Ready (S -> M) -->
+        <text x="450" y="180" text-anchor="middle" class="text-signal">AWREADY</text>
+        <line x1="700" y1="185" x2="200" y2="185" class="line-signal" marker-end="url(#arrow-head)" />
+
+        <!-- W Channel (Write Data) -->
+        <text x="450" y="220" text-anchor="middle" class="text-channel">Write Data Channel (W)</text>
+        <!-- W Info (M -> S) -->
+        <text x="450" y="235" text-anchor="middle" class="text-signal">WDATA, WSTRB, WVALID</text>
+        <line x1="200" y1="240" x2="700" y2="240" class="line-signal" marker-end="url(#arrow-head)" />
+        <!-- W Ready (S -> M) -->
+        <text x="450" y="260" text-anchor="middle" class="text-signal">WREADY</text>
+        <line x1="700" y1="265" x2="200" y2="265" class="line-signal" marker-end="url(#arrow-head)" />
+
+        <!-- B Channel (Write Response) -->
+        <text x="450" y="300" text-anchor="middle" class="text-channel">Write Response Channel (B)</text>
+        <!-- B Info (S -> M) : 슬레이브가 응답을 줌 -->
+        <text x="450" y="315" text-anchor="middle" class="text-signal">BRESP, BVALID</text>
+        <line x1="700" y1="320" x2="200" y2="320" class="line-signal" marker-end="url(#arrow-head)" />
+        <!-- B Ready (M -> S) : 마스터가 받을 준비가 됨 -->
+        <text x="450" y="340" text-anchor="middle" class="text-signal">BREADY</text>
+        <line x1="200" y1="345" x2="700" y2="345" class="line-signal" marker-end="url(#arrow-head)" />
+
+
+        <!-- ==================== READ CHANNELS (읽기 채널) ==================== -->
+
+        <!-- AR Channel (Read Address) -->
+        <text x="450" y="460" text-anchor="middle" class="text-channel">Read Address Channel (AR)</text>
+        <!-- AR Info (M -> S) -->
+        <text x="450" y="475" text-anchor="middle" class="text-signal">ARADDR, ARPROT, ARVALID</text>
+        <line x1="200" y1="480" x2="700" y2="480" class="line-signal" marker-end="url(#arrow-head)" />
+        <!-- AR Ready (S -> M) -->
+        <text x="450" y="500" text-anchor="middle" class="text-signal">ARREADY</text>
+        <line x1="700" y1="505" x2="200" y2="505" class="line-signal" marker-end="url(#arrow-head)" />
+
+        <!-- R Channel (Read Data) -->
+        <text x="450" y="540" text-anchor="middle" class="text-channel">Read Data Channel (R)</text>
+        <!-- R Info (S -> M) : 슬레이브가 데이터를 줌 -->
+        <text x="450" y="555" text-anchor="middle" class="text-signal">RDATA, RRESP, RVALID</text>
+        <line x1="700" y1="560" x2="200" y2="560" class="line-signal" marker-end="url(#arrow-head)" />
+        <!-- R Ready (M -> S) : 마스터가 받을 준비가 됨 -->
+        <text x="450" y="580" text-anchor="middle" class="text-signal">RREADY</text>
+        <line x1="200" y1="585" x2="700" y2="585" class="line-signal" marker-end="url(#arrow-head)" />
+
+
+        <!-- ==================== Figure Caption (캡션) ==================== -->
+        <text x="450" y="690" text-anchor="middle" class="text-caption">Figure. AXI4-Lite Master/Slave Architecture (Read/Write Flow)</text>
+
+    </svg>

@@ -12,8 +12,9 @@ Summary:
 
 module FetchStage (
   input  logic                     iClk,
-  input  logic                     iRstn,
+  input  logic                     iRst,
   input  logic                     iPcWe,
+  input  logic                     iFetchReqValid,
   input  logic                     iFetchValid,
   input  logic                     iTrapRedirectValid,
   input  logic [31:0]              iTrapRedirectPc,
@@ -49,7 +50,7 @@ module FetchStage (
   // Instantiates the architecturally registered program counter
   Pc uPc (
     .iClk   (iClk),
-    .iRstn  (iRstn),
+    .iRst  (iRst),
     .iPcWe  (iPcWe),
     .iNextPc(NextPc),
     .oPc    (oPc)
@@ -57,7 +58,7 @@ module FetchStage (
 
   // ==== 3. Instruction Bus Request ====
 
-  assign oInstrBusReq.ReqValid = iFetchValid;
+  assign oInstrBusReq.ReqValid = iFetchReqValid;
   assign oInstrBusReq.ReqAddr  = oPc;
 
   // ==== 4. IF/ID Payload Assembly ====

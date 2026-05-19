@@ -23,7 +23,7 @@ module ExecuteCsrCtrl (
   input  rv32i_pkg::SysOpE     iSysOp,
 
   output logic                 oCsrActive,
-  output logic                 oCsrWriteEn,
+  output logic                 oCsrWrEn,
   output logic [11:0]          oCsrAddr,
   output logic [31:0]          oCsrWdata,
   output logic                 oMretValid
@@ -43,23 +43,23 @@ module ExecuteCsrCtrl (
 
   always_comb begin
     oCsrWdata   = iCsrRdata;
-    oCsrWriteEn = 1'b0;
+    oCsrWrEn = 1'b0;
 
     if (iValid && !iKill && !iTrapActive && oCsrActive) begin
       unique case (iCsrCmd)
         CSR_RW: begin
           oCsrWdata   = CsrOperand;
-          oCsrWriteEn = 1'b1;
+          oCsrWrEn = 1'b1;
         end
 
         CSR_RS: begin
           oCsrWdata   = iCsrRdata | CsrOperand;
-          oCsrWriteEn = (CsrOperand != '0);
+          oCsrWrEn = (CsrOperand != '0);
         end
 
         CSR_RC: begin
           oCsrWdata   = iCsrRdata & ~CsrOperand;
-          oCsrWriteEn = (CsrOperand != '0);
+          oCsrWrEn = (CsrOperand != '0);
         end
 
         default: begin

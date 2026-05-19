@@ -13,7 +13,7 @@ Summary:
 module StoreDataMux (
   input  logic [31:0]             iRs2Data,
   input  logic [31:0]             iExMemFwdData,
-  input  logic [31:0]             iMemWbWriteData,
+  input  logic [31:0]             iMemWbWrData,
   input  rv32i_pkg::ForwardSelE iRs2FwdSel,
 
   output logic [31:0]             oStoreData
@@ -26,7 +26,7 @@ module StoreDataMux (
     unique case (iRs2FwdSel)
       FWD_NONE:   oStoreData = iRs2Data;
       FWD_EX_MEM: oStoreData = iExMemFwdData;
-      FWD_MEM_WB: oStoreData = iMemWbWriteData;
+      FWD_MEM_WB: oStoreData = iMemWbWrData;
       default:    oStoreData = iRs2Data;
     endcase
   end

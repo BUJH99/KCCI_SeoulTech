@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="610" viewBox="0 0 1180 610" role="img" aria-labelledby="title desc">
+  <title id="title">PLIC-lite INTC Block Diagram</title>
+  <desc id="desc">Interrupt controller blocks from raw peripheral IRQs through claim, complete, priority selection, vector table, and CSR trap path.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155"/>
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .block { fill: #ffffff; stroke: #1f2937; stroke-width: 2; rx: 10; }
+      .irq { fill: #fff7ed; stroke: #c2410c; }
+      .reg { fill: #ecfeff; stroke: #0e7490; }
+      .sel { fill: #eef2ff; stroke: #4338ca; }
+      .cpu { fill: #f0fdf4; stroke: #15803d; }
+      .title { font: 700 24px Arial, sans-serif; fill: #111827; }
+      .text { font: 600 15px Arial, sans-serif; fill: #111827; }
+      .small { font: 13px Arial, sans-serif; fill: #374151; }
+      .edge { fill: none; stroke: #334155; stroke-width: 2; marker-end: url(#arrow); }
+      .edge2 { fill: none; stroke: #0e7490; stroke-width: 2; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect class="bg" x="0" y="0" width="1180" height="610"/>
+  <text class="title" x="40" y="48">INTC like PLIC - PLIC-lite Block Diagram</text>
+  <text class="small" x="40" y="76">Single machine-mode context, 6 sources, 3-bit priority, APB claim/complete contract.</text>
+
+  <rect class="block irq" x="45" y="150" width="160" height="250"/>
+  <text class="text" x="125" y="180" text-anchor="middle">Raw IRQ Vec</text>
+  <text class="small" x="125" y="215" text-anchor="middle">1 GPIO</text>
+  <text class="small" x="125" y="240" text-anchor="middle">2 UART RX</text>
+  <text class="small" x="125" y="265" text-anchor="middle">3 I2C event</text>
+  <text class="small" x="125" y="290" text-anchor="middle">4 I2C error</text>
+  <text class="small" x="125" y="315" text-anchor="middle">5 SPI event</text>
+  <text class="small" x="125" y="340" text-anchor="middle">6 SPI error</text>
+
+  <rect class="block" x="260" y="150" width="170" height="96"/>
+  <text class="text" x="345" y="188" text-anchor="middle">IntcGateway</text>
+  <text class="small" x="345" y="213" text-anchor="middle">raw level to pending pulse</text>
+  <text class="small" x="345" y="232" text-anchor="middle">block until COMPLETE</text>
+
+  <rect class="block" x="260" y="310" width="170" height="96"/>
+  <text class="text" x="345" y="348" text-anchor="middle">IntcPendingCtrl</text>
+  <text class="small" x="345" y="373" text-anchor="middle">pending and in-service</text>
+  <text class="small" x="345" y="392" text-anchor="middle">claim clears pending</text>
+
+  <rect class="block reg" x="485" y="110" width="210" height="150"/>
+  <text class="text" x="590" y="145" text-anchor="middle">IntcRegIf</text>
+  <text class="small" x="590" y="175" text-anchor="middle">PENDING, ENABLE</text>
+  <text class="small" x="590" y="198" text-anchor="middle">CLAIM, COMPLETE</text>
+  <text class="small" x="590" y="221" text-anchor="middle">CTRL, THRESHOLD</text>
+  <text class="small" x="590" y="244" text-anchor="middle">PRIORITY, VECTOR</text>
+
+  <rect class="block sel" x="485" y="320" width="210" height="120"/>
+  <text class="text" x="590" y="358" text-anchor="middle">IntcPriorityClaim</text>
+  <text class="small" x="590" y="386" text-anchor="middle">pending &amp; enable</text>
+  <text class="small" x="590" y="408" text-anchor="middle">priority &gt; threshold</text>
+
+  <rect class="block sel" x="750" y="320" width="185" height="120"/>
+  <text class="text" x="842" y="358" text-anchor="middle">IntcVectorTable</text>
+  <text class="small" x="842" y="386" text-anchor="middle">optional per-source PC</text>
+  <text class="small" x="842" y="408" text-anchor="middle">CTRL[0] enables</text>
+
+  <rect class="block cpu" x="990" y="275" width="150" height="180"/>
+  <text class="text" x="1065" y="310" text-anchor="middle">Rv32iCore</text>
+  <text class="small" x="1065" y="340" text-anchor="middle">mip.MEIP</text>
+  <text class="small" x="1065" y="365" text-anchor="middle">TrapController</text>
+  <text class="small" x="1065" y="390" text-anchor="middle">trap_entry</text>
+  <text class="small" x="1065" y="415" text-anchor="middle">CLAIM service</text>
+
+  <path class="edge" d="M205 220 L260 198"/>
+  <path class="edge" d="M345 246 L345 310"/>
+  <path class="edge" d="M430 358 L485 380"/>
+  <path class="edge" d="M695 380 L750 380"/>
+  <path class="edge" d="M935 380 L990 365"/>
+  <path class="edge" d="M695 365 C800 250 925 235 990 320"/>
+  <text class="small" x="865" y="250" text-anchor="middle">oMachineExtIrq</text>
+
+  <path class="edge2" d="M590 260 L590 320"/>
+  <text class="small" x="645" y="294">enable, priority, threshold</text>
+  <path class="edge2" d="M485 198 C445 250 435 300 430 338"/>
+  <text class="small" x="442" y="285" text-anchor="middle">CLAIM</text>
+  <path class="edge2" d="M485 232 C442 430 394 450 345 406"/>
+  <text class="small" x="405" y="465" text-anchor="middle">COMPLETE releases gateway</text>
+
+  <rect class="block reg" x="760" y="110" width="175" height="105"/>
+  <text class="text" x="847" y="145" text-anchor="middle">APB MMIO</text>
+  <text class="small" x="847" y="175" text-anchor="middle">base 0x4000_3000</text>
+  <text class="small" x="847" y="198" text-anchor="middle">4 KB window</text>
+  <path class="edge2" d="M760 164 L695 164"/>
+</svg>

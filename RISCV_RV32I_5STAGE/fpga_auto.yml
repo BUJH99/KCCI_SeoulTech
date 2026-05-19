@@ -2,7 +2,7 @@ version: "1"
 project:
   name: "RISCV_RV32I_5STAGE"
 hdl:
-  top: "Top"
+  top: "TOP"
   src_globs:
     - "src/**/*.v"
     - "src/**/*.sv"

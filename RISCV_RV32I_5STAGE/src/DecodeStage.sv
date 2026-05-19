@@ -12,14 +12,14 @@ Summary:
 
 module DecodeStage (
   input  logic                    iClk,
-  input  logic                    iRstn,
+  input  logic                    iRst,
   
   input  rv32i_pkg::IFID_t        iIFID,
   input  rv32i_pkg::IDEX_t        iIDEX,
   
-  input  logic                    iWbWriteEn,
+  input  logic                    iWbWrEn,
   input  logic [4:0]              iWbRdAddr,
-  input  logic [31:0]             iWbWriteData,
+  input  logic [31:0]             iWbWrData,
   
   output logic                    oLoadUseStall,
   output logic                    oRedirectValid,
@@ -59,12 +59,12 @@ module DecodeStage (
   // Manage synchronous writes to RF during WB stage, and transparent reads in ID stage
   Regfile uRegfile (
     .iClk         (iClk),
-    .iRstn        (iRstn),
+    .iRst        (iRst),
     .iRs1Addr     (Rs1Addr),
     .iRs2Addr     (Rs2Addr),
     .iRdAddr      (iWbRdAddr),
-    .iRdWrData    (iWbWriteData),
-    .iRdWrEn      (iWbWriteEn),
+    .iRdWrData    (iWbWrData),
+    .iRdWrEn      (iWbWrEn),
     .oRs1RdData   (Rs1Data),
     .oRs2RdData   (Rs2Data),
     .oTimingProbe ()

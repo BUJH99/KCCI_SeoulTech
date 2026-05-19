@@ -24,6 +24,8 @@ module TrapController (
   input  logic                     iMstatusMie,
   input  logic                     iMieMeie,
   input  logic                     iMipMeip,
+  input  logic                     iMieMtie,
+  input  logic                     iMipMtip,
   input  logic [31:0]              iMtvec,
   input  logic                     iIntcVectorValid,
   input  logic [31:0]              iIntcVectorPc,
@@ -33,37 +35,44 @@ module TrapController (
   output logic [31:0]              oTrapEnterCause,
   output logic                     oTrapFromEx,
   output logic                     oTrapFromMem,
-  output logic                     oTrapFromInterrupt,
+  output logic                     oTrapFromIrq,
   output logic                     oTrapRedirectValid,
   output logic [31:0]              oTrapRedirectPc,
-  output logic                     oInterruptAccepted
+  output logic                     oIrqAccepted
 );
 
   import rv32i_pkg::*;
 
-  logic InterruptAccept;
-  logic TrapIsInterrupt;
-  logic TrapIsMachineExtInterrupt;
+  logic IrqWindowOpen;
+  logic ExternalIrqAccept;
+  logic TimerIrqAccept;
+  logic IrqAccept;
+  logic TrapIsIrq;
+  logic TrapIsMachineExtIrq;
   logic [30:0] TrapMcauseCode;
   logic [31:0] MtvecBase;
   logic [1:0]  MtvecMode;
   logic [31:0] StandardTrapPc;
 
-  assign InterruptAccept = iIFID.Valid
-                        && !iMemTrapValid
-                        && !iExTrapValid
-                        && !iExRedirectValid
-                        && !iIdTrapValid
-                        && iMstatusMie
-                        && iMieMeie
-                        && iMipMeip;
+  assign IrqWindowOpen = iIFID.Valid
+                             && !iMemTrapValid
+                             && !iExTrapValid
+                             && !iExRedirectValid
+                             && !iIdTrapValid
+                             && iMstatusMie;
+  assign ExternalIrqAccept = IrqWindowOpen && iMieMeie && iMipMeip;
+  assign TimerIrqAccept    = IrqWindowOpen
+                                && !ExternalIrqAccept
+                                && iMieMtie
+                                && iMipMtip;
+  assign IrqAccept         = ExternalIrqAccept || TimerIrqAccept;
 
   assign MtvecBase                 = {iMtvec[31:2], 2'b00};
   assign MtvecMode                 = iMtvec[LP_MTVEC_MODE_MSB:LP_MTVEC_MODE_LSB];
-  assign TrapIsInterrupt           = McauseIsInterrupt(oTrapEnterCause);
+  assign TrapIsIrq           = McauseIsInterrupt(oTrapEnterCause);
   assign TrapMcauseCode            = McauseCode(oTrapEnterCause);
-  assign TrapIsMachineExtInterrupt = (oTrapEnterCause == LP_MCAUSE_MACHINE_EXT_INT);
-  assign StandardTrapPc            = (TrapIsInterrupt && (MtvecMode == LP_MTVEC_MODE_VECTORED))
+  assign TrapIsMachineExtIrq = (oTrapEnterCause == LP_MCAUSE_MACHINE_EXT_INT);
+  assign StandardTrapPc            = (TrapIsIrq && (MtvecMode == LP_MTVEC_MODE_VECTORED))
                                    ? (MtvecBase + {TrapMcauseCode[29:0], 2'b00})
                                    : MtvecBase;
 
@@ -73,7 +82,7 @@ module TrapController (
     oTrapEnterCause   = '0;
     oTrapFromEx       = 1'b0;
     oTrapFromMem      = 1'b0;
-    oTrapFromInterrupt = 1'b0;
+    oTrapFromIrq = 1'b0;
 
     if (iMemTrapValid) begin
       oTrapCaptureValid = 1'b1;
@@ -89,18 +98,22 @@ module TrapController (
       oTrapCaptureValid = 1'b1;
       oTrapEnterEpc     = iIFID.Pc;
       oTrapEnterCause   = TrapCauseToMcause(iIdTrapCause);
-    end else if (InterruptAccept) begin
+    end else if (IrqAccept) begin
       oTrapCaptureValid = 1'b1;
       oTrapEnterEpc     = iIFID.Pc;
-      oTrapEnterCause   = LP_MCAUSE_MACHINE_EXT_INT;
-      oTrapFromInterrupt = 1'b1;
+      if (ExternalIrqAccept) begin
+        oTrapEnterCause = InterruptCauseToMcause(IRQ_MACHINE_EXTERNAL);
+      end else begin
+        oTrapEnterCause = InterruptCauseToMcause(IRQ_MACHINE_TIMER);
+      end
+      oTrapFromIrq = 1'b1;
     end
   end
 
   assign oTrapRedirectValid = oTrapCaptureValid;
-  assign oTrapRedirectPc    = (TrapIsMachineExtInterrupt && iIntcVectorValid)
+  assign oTrapRedirectPc    = (TrapIsMachineExtIrq && iIntcVectorValid)
                             ? iIntcVectorPc
                             : StandardTrapPc;
-  assign oInterruptAccepted = InterruptAccept;
+  assign oIrqAccepted = IrqAccept;
 
 endmodule

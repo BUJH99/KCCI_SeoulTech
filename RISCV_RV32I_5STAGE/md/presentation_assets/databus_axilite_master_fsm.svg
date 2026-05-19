@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="560" viewBox="0 0 1120 560" role="img" aria-labelledby="title desc">
+  <title id="title">DataBusAxiLiteMaster FSM</title>
+  <desc id="desc">Native data bus request converted to AXI4-Lite read and write transactions.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#374151"/>
+    </marker>
+    <style>
+      .bg { fill: #f8fafc; }
+      .state { fill: #ffffff; stroke: #1f2937; stroke-width: 2; rx: 10; }
+      .write { fill: #fff7ed; stroke: #c2410c; }
+      .read { fill: #ecfeff; stroke: #0e7490; }
+      .note { fill: #f1f5f9; stroke: #64748b; stroke-width: 1.5; rx: 8; }
+      .title { font: 700 24px Arial, sans-serif; fill: #111827; }
+      .text { font: 600 16px Arial, sans-serif; fill: #111827; }
+      .small { font: 13px Arial, sans-serif; fill: #374151; }
+      .edge { fill: none; stroke: #374151; stroke-width: 2; marker-end: url(#arrow); }
+      .edgeWrite { fill: none; stroke: #c2410c; stroke-width: 2; marker-end: url(#arrow); }
+      .edgeRead { fill: none; stroke: #0e7490; stroke-width: 2; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect class="bg" x="0" y="0" width="1120" height="560"/>
+  <text class="title" x="40" y="48">DataBusAxiLiteMaster FSM</text>
+  <text class="small" x="40" y="76">One native MEM-stage APB-window request is latched, then emitted as one AXI4-Lite transaction.</text>
+
+  <rect class="state" x="70" y="215" width="160" height="90"/>
+  <text class="text" x="150" y="253" text-anchor="middle">IDLE</text>
+  <text class="small" x="150" y="276" text-anchor="middle">latch request</text>
+
+  <rect class="state write" x="350" y="130" width="220" height="105"/>
+  <text class="text" x="460" y="171" text-anchor="middle">WRITE_ADDR_DATA</text>
+  <text class="small" x="460" y="195" text-anchor="middle">AWVALID and WVALID</text>
+  <text class="small" x="460" y="214" text-anchor="middle">track awDone, wDone</text>
+
+  <rect class="state write" x="740" y="130" width="170" height="105"/>
+  <text class="text" x="825" y="171" text-anchor="middle">WRITE_RESP</text>
+  <text class="small" x="825" y="195" text-anchor="middle">BREADY</text>
+  <text class="small" x="825" y="214" text-anchor="middle">BRESP to RspErr</text>
+
+  <rect class="state read" x="350" y="320" width="170" height="95"/>
+  <text class="text" x="435" y="358" text-anchor="middle">READ_ADDR</text>
+  <text class="small" x="435" y="382" text-anchor="middle">ARVALID</text>
+
+  <rect class="state read" x="740" y="320" width="170" height="95"/>
+  <text class="text" x="825" y="358" text-anchor="middle">READ_DATA</text>
+  <text class="small" x="825" y="382" text-anchor="middle">RREADY</text>
+  <text class="small" x="825" y="401" text-anchor="middle">RDATA to RspRdata</text>
+
+  <path class="edgeWrite" d="M230 242 C270 210 302 184 350 184"/>
+  <text class="small" x="286" y="204" text-anchor="middle">iReqValid &amp; write</text>
+  <path class="edgeWrite" d="M570 183 L740 183"/>
+  <text class="small" x="655" y="171" text-anchor="middle">AW and W handshakes done</text>
+  <path class="edgeWrite" d="M825 130 C825 90 180 90 150 215"/>
+  <text class="small" x="545" y="100" text-anchor="middle">BVALID - oRspReady, then IDLE</text>
+
+  <path class="edgeRead" d="M230 281 C275 324 310 368 350 368"/>
+  <text class="small" x="292" y="346" text-anchor="middle">iReqValid &amp; read</text>
+  <path class="edgeRead" d="M520 368 L740 368"/>
+  <text class="small" x="630" y="356" text-anchor="middle">AR handshake</text>
+  <path class="edgeRead" d="M825 415 C825 475 195 475 150 305"/>
+  <text class="small" x="545" y="490" text-anchor="middle">RVALID - oRspReady, then IDLE</text>
+
+  <rect class="note" x="925" y="176" width="155" height="244"/>
+  <text class="text" x="1002" y="210" text-anchor="middle">Response rule</text>
+  <text class="small" x="1002" y="242" text-anchor="middle">OKAY = 2'b00</text>
+  <text class="small" x="1002" y="266" text-anchor="middle">RESP != OKAY</text>
+  <text class="small" x="1002" y="286" text-anchor="middle">sets oRspErr</text>
+  <text class="small" x="1002" y="322" text-anchor="middle">AW/W may finish</text>
+  <text class="small" x="1002" y="342" text-anchor="middle">independently</text>
+  <text class="small" x="1002" y="378" text-anchor="middle">AWPROT/ARPROT</text>
+  <text class="small" x="1002" y="398" text-anchor="middle">fixed to 3'b000</text>
+</svg>

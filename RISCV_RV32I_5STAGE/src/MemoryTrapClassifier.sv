@@ -14,8 +14,8 @@ module MemoryTrapClassifier (
   input  logic                   iValid,
   input  logic                   iKill,
   input  rv32i_pkg::TrapCauseE   iIncomingTrapCause,
-  input  logic                   iMemReadEn,
-  input  logic                   iMemWriteEn,
+  input  logic                   iMemRdEn,
+  input  logic                   iMemWrEn,
   input  logic                   iBusReqValid,
   input  logic                   iBusRspErr,
   input  logic                   iLoadMisalign,
@@ -38,9 +38,9 @@ module MemoryTrapClassifier (
     end else if (iStoreMisalign) begin
       oTrapCause = TRAP_STORE_MISALIGNED;
     end else if (iBusReqValid && iBusRspErr) begin
-      if (iMemReadEn) begin
+      if (iMemRdEn) begin
         oTrapCause = TRAP_LOAD_ACCESS;
-      end else if (iMemWriteEn) begin
+      end else if (iMemWrEn) begin
         oTrapCause = TRAP_STORE_ACCESS;
       end
     end

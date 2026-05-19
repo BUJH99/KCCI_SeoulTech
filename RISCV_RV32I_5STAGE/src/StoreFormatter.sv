@@ -11,7 +11,7 @@ Summary:
 `timescale 1ns / 1ps
 
 module StoreFormatter (
-  input  logic                  iMemWrite,
+  input  logic                  iMemWr,
   input  rv32i_pkg::MemSizeE  iMemSize,
   input  logic [31:0]           iAddr,
   input  logic [31:0]           iStoreData,
@@ -28,7 +28,7 @@ module StoreFormatter (
     oByteEn     = 4'b0000;
     oWrData     = '0;
 
-    if (iMemWrite) begin
+    if (iMemWr) begin
       unique case (iMemSize)
         MEM_BYTE: begin
           oWrData = {4{iStoreData[7:0]}};
